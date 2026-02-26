@@ -1,6 +1,6 @@
 # 使用 NVIDIA 官方提供的 CUDA 開發版映像檔作為基底
 # 我們需要 devel 版本因為安裝 llama-cpp-python 時需要編譯 CUDA 相關的 C/C++ 程式碼
-FROM nvidia/cuda:12.4.1-devel-ubuntu24.04
+FROM nvidia/cuda:12.6.3-devel-ubuntu24.04
 
 # 設定環境變數以防止 apt 安裝過程中出現互動式提示
 ENV DEBIAN_FRONTEND=noninteractive
