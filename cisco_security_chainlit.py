@@ -99,6 +99,31 @@ async def on_chat_start():
             qdrant_client = QdrantClient(url=qdrant_url)
             print("Setting up embedding model...")
             qdrant_client.set_model("BAAI/bge-small-en-v1.5")
+
+            # 自動初始化：若 security_playbooks collection 不存在，自動建立並注入 SOP 文件
+            COLLECTION_NAME = "security_playbooks"
+            existing = [c.name for c in qdrant_client.get_collections().collections]
+            if COLLECTION_NAME not in existing:
+                print(f"[RAG] Collection '{COLLECTION_NAME}' not found. Running auto-ingest...")
+                documents = [
+                    {"id": 1, "title": "Handling config.php.bak scans",
+                     "content": "If a user or IP is repeatedly scanning for config.php.bak, backup.zip, or similar backup files, it indicates a directory traversal or backup file exposure attack. Action: Immediately block the IP at the WAF level and investigate if any backup files are actually exposed on the server."},
+                    {"id": 2, "title": "Recurring Nginx 404s",
+                     "content": "A high volume of Nginx 404 errors for hidden files (e.g., .env, .git/config) signifies an automated vulnerability scanner. Action: Temporarily ban the IP using fail2ban and enable rate limiting for 404 responses."},
+                    {"id": 3, "title": "SSH Brute Force",
+                     "content": "Multiple failed SSH login attempts for users like root or admin. Action: Ensure password authentication is disabled, rely on SSH keys only, and verify fail2ban is monitoring port 22."},
+                    {"id": 4, "title": "SQL Injection Attempts",
+                     "content": "Logs containing keywords like UNION SELECT, OR 1=1, or unexpected quotation marks in URL parameters. Action: Validate input sanitization on the application end and update WAF rules to block common SQLi payloads."},
+                ]
+                qdrant_client.add(
+                    collection_name=COLLECTION_NAME,
+                    documents=[d["content"] for d in documents],
+                    metadata=[{"title": d["title"]} for d in documents],
+                    ids=[d["id"] for d in documents],
+                )
+                print(f"[RAG] ✅ Auto-ingest complete: {len(documents)} SOPs added to '{COLLECTION_NAME}'.")
+            else:
+                print(f"[RAG] ✅ Collection '{COLLECTION_NAME}' already exists, skipping ingest.")
             
         loading_msg.content = "### ✅ 模型載入完成！\n\n🛡️ **歡迎使用 Foundation-Sec-8B Security Assistant!** 🛡️\n\n您可以開始輸入有關資安、程式設計或一般問題。"
         await loading_msg.update()

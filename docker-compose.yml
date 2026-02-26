@@ -19,13 +19,10 @@ services:
 
   # 資安應用程式：Chainlit + Foundation-Sec-8B (GPU 加速)
   security-app:
+    working_dir: /app
     build: .
     container_name: security-app-gpu
     restart: unless-stopped
-    volumes:
-      # 將整個目錄掛載會覆蓋掉 Image 中已下載的 /app/models
-      # 改為只掛載會頻繁修改的程式碼檔案，確保 Image 內建的模型檔案保留
-      - ./:/app
     environment:
       # NVIDIA 容器配置
       - NVIDIA_VISIBLE_DEVICES=all
@@ -37,13 +34,13 @@ services:
       - MODEL_LLAMA3_PATH=/app/models/llama-3-taiwan-8b-instruct-q4_k_m.gguf
 
       # RTX 2060 6GB VRAM 分配策略 (Q4_K_M 8B 各有 32 層，每層約 140MB)：
-      # - 兩個模型全部上 GPU 需要約 9GB → 遠超 6GB 上限
-      # - Llama-3-Taiwan (分類+翻譯)：10/32 層上 GPU → ~1.4GB（速度優先，品質次之）
-      # - Foundation-Sec (資安分析)：20/32 層上 GPU → ~2.8GB（分析品質優先）
-      # - 合計約 4.2GB，留 ~1.8GB 給 KV cache 與 CUDA context overhead
-      # ⚠️ 若仍 OOM，請將兩個數值各降低 5 再試
-      - N_GPU_LAYERS_LLAMA3=10
-      - N_GPU_LAYERS_SEC=20
+      # - Llama-3-Taiwan (分類+翻譯)：10/32 層上 GPU → ~1.26GB
+      # - Foundation-Sec (資安分析)：15/32 層上 GPU → ~1.87GB
+      # - 兩個 KV cache：~0.48GB，compute buffer：~1.34GB
+      # - 合計約 4.95GB，留 ~1GB 給 CUDA context overhead 與碎片
+      # ⚠️ 若仍 OOM，請將 N_GPU_LAYERS_SEC 再降 5
+      - N_GPU_LAYERS_LLAMA3=5
+      - N_GPU_LAYERS_SEC=10
 
       # 針對 RTX 2060 6GB 的 Python/CUDA 優化 (防止記憶體碎片化)
       - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True

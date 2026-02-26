@@ -1,35 +1,38 @@
-#!/bin/sh
+#!/bin/bash
 # Maintainer: Willis Chen <misweyu2007@gmail.com>
 set -e
 
-mkdir -p ./models
-
-echo "Installing curl and wget if not present..."
-apk add --no-cache wget curl 2>/dev/null || true
+mkdir -p /app/models
 
 echo "Checking and downloading Llama-3-Taiwan-8B-Instruct..."
-if [ ! -f ./models/llama-3-taiwan-8b-instruct-q4_k_m.gguf ]; then
-  wget -O ./models/llama-3-taiwan-8b-instruct-q4_k_m.gguf \
+if [ ! -f /app/models/llama-3-taiwan-8b-instruct-q4_k_m.gguf ]; then
+  wget -q --show-progress \
+    -O /app/models/llama-3-taiwan-8b-instruct-q4_k_m.gguf \
     https://huggingface.co/phate334/Llama-3-Taiwan-8B-Instruct-Q4_K_M-GGUF/resolve/main/llama-3-taiwan-8b-instruct-q4_k_m.gguf
+  echo "Llama-3-Taiwan downloaded."
 else
-  echo "Llama-3-Taiwan already exists."
+  echo "Llama-3-Taiwan already exists, skipping."
 fi
 
 echo "Checking and downloading Foundation-Sec-8B..."
-if [ -f ./models/foundation-sec-8b-q4_k_m.gguf ]; then
-  FILESIZE=$(stat -c%s "/models/foundation-sec-8b-q4_k_m.gguf" 2>/dev/null || stat -f%z "/models/foundation-sec-8b-q4_k_m.gguf" 2>/dev/null || echo 0)
+FOUNDATION_MODEL="/app/models/foundation-sec-8b-q4_k_m.gguf"
+
+# 如果存在但檔案過小（下載不完整），先刪除重新下載
+if [ -f "$FOUNDATION_MODEL" ]; then
+  FILESIZE=$(stat -c%s "$FOUNDATION_MODEL" 2>/dev/null || echo 0)
   if [ "$FILESIZE" -lt 1000000000 ]; then
-    echo "Existing file is too small (likely a failed download or error page). Redownloading..."
-    rm -f /models/foundation-sec-8b-q4_k_m.gguf
+    echo "Existing file is too small (likely incomplete). Re-downloading..."
+    rm -f "$FOUNDATION_MODEL"
   fi
 fi
 
-if [ ! -f ./models/foundation-sec-8b-q4_k_m.gguf ]; then
-  # Fetching from an ungated HuggingFace repository containing the GGUF model
-  wget -O ./models/foundation-sec-8b-q4_k_m.gguf \
+if [ ! -f "$FOUNDATION_MODEL" ]; then
+  wget -q --show-progress \
+    -O "$FOUNDATION_MODEL" \
     https://huggingface.co/DevQuasar/fdtn-ai.Foundation-Sec-8B-GGUF/resolve/main/fdtn-ai.Foundation-Sec-8B.Q4_K_M.gguf
+  echo "Foundation-Sec-8B downloaded."
 else
-  echo "Foundation-Sec-8B already exists and is valid."
+  echo "Foundation-Sec-8B already exists and is valid, skipping."
 fi
 
 echo "All models downloaded successfully."

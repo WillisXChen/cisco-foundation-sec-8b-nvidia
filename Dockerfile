@@ -55,7 +55,8 @@ COPY download_models.sh .
 RUN chmod +x download_models.sh
 
 # 在建立 Image 的過程中預先下載模型 (這會花一些時間，但能確保啟動時不用等)
-RUN ./download_models.sh
+# 使用 bash 明確執行（腳本 shebang 為 #!/bin/bash）
+RUN bash download_models.sh
 
 # 複製其餘的應用程式碼進容器
 COPY . .
