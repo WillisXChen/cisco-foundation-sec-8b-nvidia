@@ -8,12 +8,13 @@ services:
       - "6334:6334"
     volumes:
       - ./qdrant_storage:/qdrant/storage
-    restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:6333/healthz || wget -qO- http://localhost:6333/healthz || exit 1" ]
-      interval: 5s
-      timeout: 3s
+      test: [ "CMD", "curl", "-f", "http://localhost:6333/healthz" ]
+      interval: 10s
+      timeout: 5s
       retries: 5
+      start_period: 15s
+    restart: unless-stopped
 
   # 資安應用程式：Chainlit + Foundation-Sec-8B (GPU 加速)
   security-app:
@@ -21,7 +22,9 @@ services:
     container_name: security-app-gpu
     restart: unless-stopped
     volumes:
-      - .:/app
+      # 將整個目錄掛載會覆蓋掉 Image 中已下載的 /app/models
+      # 改為只掛載會頻繁修改的程式碼檔案，確保 Image 內建的模型檔案保留
+      - ./:/app
     environment:
       # NVIDIA 容器配置
       - NVIDIA_VISIBLE_DEVICES=all
