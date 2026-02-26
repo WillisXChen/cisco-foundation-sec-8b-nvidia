@@ -48,11 +48,11 @@
   **依據 GPU VRAM 大小的推薦設定值**：
   | GPU VRAM | 代表型號 | `N_GPU_LAYERS_LLAMA3` | `N_GPU_LAYERS_SEC` | 預估 VRAM 經消 |
   |---|---|---|---|---|
-  | 6 GB | RTX 2060, RTX 3060 | `10` | `20` | ~4.2 GB |
-  | 8 GB | RTX 3060 Ti, RTX 4060 | `15` | `25` | ~5.6 GB |
-  | 10 GB | RTX 3080 | `20` | `30` | ~7.0 GB |
-  | 12 GB | RTX 3080 Ti, RTX 4070 | `24` | `32` | ~7.8 GB |
-  | 16 GB+ | RTX 4080, A4000 | `32` | `32` | ~9.0 GB（全 GPU）|
+  | 6 GB | RTX 2060, RTX 3060 | `5` | `15` | ~2.8 GB |
+  | 8 GB | RTX 3060 Ti, RTX 4060 | `10` | `20` | ~4.2 GB |
+  | 10 GB | RTX 3080 | `15` | `25` | ~5.6 GB |
+  | 12 GB | RTX 3080 Ti, RTX 4070 | `19` | `27` | ~6.4 GB |
+  | 16 GB+ | RTX 4080, A4000 | `27` | `32` | ~8.3 GB（全 GPU）|
 
   > ⚠️ 數值設定過高（超出 VRAM 容量）將導致 **CUDA Out-Of-Memory (OOM)**。
   > 動式公式：`(N_GPU_LAYERS_LLAMA3 × 140 MB) + (N_GPU_LAYERS_SEC × 140 MB) < GPU VRAM × 70%`
@@ -101,11 +101,11 @@
 ## 常見問題與排除
 
 - **找不到 GPU / 容器無法啟動**：請確認主機上已正確安裝 NVIDIA Container Toolkit。容器會在 `docker-compose.yml` 中透過 `deploy.resources` 的 `nvidia` 驅動以及環境變數 `NVIDIA_VISIBLE_DEVICES=all` 來取用 GPU。
-- **記憶體不足 (OOM) / 頻繁崩潰**：每個 Q4_K_M 8B 模型共有 **32 個 transformer 層**，每層約 140 MB VRAM。預設配置（`N_GPU_LAYERS_LLAMA3=10`、`N_GPU_LAYERS_SEC=20`）合計約 4.2 GB。若仍 OOM，請修改 `docker-compose.yml` 中的數值：
+- **記憶體不足 (OOM) / 頻繁崩潰**：每個 Q4_K_M 8B 模型共有 **32 個 transformer 層**，每層約 140 MB VRAM。預設配置（`N_GPU_LAYERS_LLAMA3=5`、`N_GPU_LAYERS_SEC=15`）合計約 2.8 GB。若仍 OOM，請修改 `docker-compose.yml` 中的數值：
   ```yaml
   environment:
-    - N_GPU_LAYERS_LLAMA3=10   # 若仍 OOM 可降至 5
-    - N_GPU_LAYERS_SEC=20      # 若仍 OOM 可降至 15
+    - N_GPU_LAYERS_LLAMA3=5    # 若仍 OOM 可降至 3
+    - N_GPU_LAYERS_SEC=15      # 若仍 OOM 可降至 10
   ```
 - **模型下載失敗**：如果在構建過程中遇到網路問題，可隨時重新執行構建流程，或手動執行 `./download_models.sh`。
 
@@ -116,6 +116,37 @@
   docker exec -it security-app-gpu python ingest_security_docs.py
   ```
 - **日誌自動翻譯/處理**：`translate_logs.py` 提供了一個批次處理日誌或執行跨語言轉換測試的範本，也可比照上述指令於容器內執行。
+
+## 存取控制 — Nginx htpasswd 帳號管理
+
+應用程式透過 Nginx HTTP Basic Authentication 進行保護。使用 `add_user.sh` 管理帳號，每次操作後 nginx 會自動 reload，**不會中斷現有連線**。
+
+> **首次使用** — 只需賦予執行權限一次：
+> ```bash
+> chmod +x add_user.sh
+> ```
+
+### 新增 / 更新帳號
+
+```bash
+# 互動式輸入密碼（推薦，密碼不會留在 shell 歷史紀錄）
+./add_user.sh add admin
+
+# 直接帶入密碼
+./add_user.sh add alice secret123
+```
+
+### 刪除帳號
+
+```bash
+./add_user.sh del alice
+```
+
+### 列出所有帳號
+
+```bash
+./add_user.sh list
+```
 
 ---
 

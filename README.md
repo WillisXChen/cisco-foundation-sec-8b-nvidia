@@ -48,11 +48,11 @@ This project is a bilingual (Chinese/English) security analysis smart assistant 
   **Recommended values by GPU VRAM size**:
   | GPU VRAM | Example GPUs | `N_GPU_LAYERS_LLAMA3` | `N_GPU_LAYERS_SEC` | Est. VRAM Used |
   |---|---|---|---|---|
-  | 6 GB | RTX 2060, RTX 3060 | `10` | `20` | ~4.2 GB |
-  | 8 GB | RTX 3060 Ti, RTX 4060 | `15` | `25` | ~5.6 GB |
-  | 10 GB | RTX 3080 | `20` | `30` | ~7.0 GB |
-  | 12 GB | RTX 3080 Ti, RTX 4070 | `24` | `32` | ~7.8 GB |
-  | 16 GB+ | RTX 4080, A4000 | `32` | `32` | ~9.0 GB (full GPU) |
+  | 6 GB | RTX 2060, RTX 3060 | `5` | `15` | ~2.8 GB |
+  | 8 GB | RTX 3060 Ti, RTX 4060 | `10` | `20` | ~4.2 GB |
+  | 10 GB | RTX 3080 | `15` | `25` | ~5.6 GB |
+  | 12 GB | RTX 3080 Ti, RTX 4070 | `19` | `27` | ~6.4 GB |
+  | 16 GB+ | RTX 4080, A4000 | `27` | `32` | ~8.3 GB |
 
   > ⚠️ Setting values too high (beyond your VRAM capacity) will cause **CUDA Out-Of-Memory (OOM)**.
   > Quick formula: `(N_GPU_LAYERS_LLAMA3 × 140 MB) + (N_GPU_LAYERS_SEC × 140 MB) < GPU VRAM × 70%`
@@ -101,11 +101,11 @@ Unlike the macOS version, this NVIDIA project uses a fully containerized archite
 ## Troubleshooting
 
 - **GPU not detected / Container fails to start**: Ensure the NVIDIA Container Toolkit is installed and configured correctly on the host. The container uses `deploy.resources.reservations.devices` with the `nvidia` driver and `NVIDIA_VISIBLE_DEVICES=all`.
-- **Out of memory (OOM) / Frequent crashes**: Each Q4_K_M 8B model has **32 transformer layers**, each consuming ~140 MB of VRAM. The default split (`N_GPU_LAYERS_LLAMA3=10`, `N_GPU_LAYERS_SEC=20`) uses ~4.2 GB total. To reduce pressure, edit these values in `docker-compose.yml`:
+- **Out of memory (OOM) / Frequent crashes**: Each Q4_K_M 8B model has **32 transformer layers**, each consuming ~140 MB of VRAM. The default split (`N_GPU_LAYERS_LLAMA3=5`, `N_GPU_LAYERS_SEC=15`) uses ~2.8 GB total. To reduce pressure, edit these values in `docker-compose.yml`:
   ```yaml
   environment:
-    - N_GPU_LAYERS_LLAMA3=10   # Reduce to 5 if OOM persists
-    - N_GPU_LAYERS_SEC=20      # Reduce to 15 if OOM persists
+    - N_GPU_LAYERS_LLAMA3=5    # Reduce to 3 if OOM persists
+    - N_GPU_LAYERS_SEC=15      # Reduce to 10 if OOM persists
   ```
 - **Models failed to download**: If network issues occur during the build process, you can manually execute `./download_models.sh` or restart the build process.
 
@@ -116,6 +116,39 @@ Unlike the macOS version, this NVIDIA project uses a fully containerized archite
   docker exec -it security-app-gpu python ingest_security_docs.py
   ```
 - **Automated Log Translation/Processing**: `translate_logs.py` provides a template for batch processing logs or performing cross-language conversion tests. You can run it inside the container similar to the command above.
+
+## Access Control — Nginx htpasswd User Management
+
+The application is protected by HTTP Basic Authentication via Nginx. Use `add_user.sh` to manage credentials. Changes take effect immediately without restarting any container.
+
+> **First-time setup** — grant execute permission once:
+> ```bash
+> chmod +x add_user.sh
+> ```
+
+### Add / Update a user
+
+```bash
+# Interactive (password hidden from shell history — recommended)
+./add_user.sh add admin
+
+# Non-interactive
+./add_user.sh add alice secret123
+```
+
+### Delete a user
+
+```bash
+./add_user.sh del alice
+```
+
+### List all users
+
+```bash
+./add_user.sh list
+```
+
+> After each `add` or `del`, the script automatically sends `nginx -s reload` to apply changes gracefully without dropping active connections.
 
 ---
 

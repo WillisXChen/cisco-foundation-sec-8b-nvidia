@@ -30,3 +30,4 @@ qdrant_storage/
 .Trashes
 ehthumbs.db
 Thumbs.db
+nginx/.htpasswd

@@ -48,11 +48,11 @@
   **GPU VRAM サイズ別の推奨設定値**：
   | GPU VRAM | 代表的な GPU | `N_GPU_LAYERS_LLAMA3` | `N_GPU_LAYERS_SEC` | 推定 VRAM 消費 |
   |---|---|---|---|---|
-  | 6 GB | RTX 2060, RTX 3060 | `10` | `20` | ~4.2 GB |
-  | 8 GB | RTX 3060 Ti, RTX 4060 | `15` | `25` | ~5.6 GB |
-  | 10 GB | RTX 3080 | `20` | `30` | ~7.0 GB |
-  | 12 GB | RTX 3080 Ti, RTX 4070 | `24` | `32` | ~7.8 GB |
-  | 16 GB+ | RTX 4080, A4000 | `32` | `32` | ~9.0 GB（フル GPU）|
+  | 6 GB | RTX 2060, RTX 3060 | `5` | `15` | ~2.8 GB |
+  | 8 GB | RTX 3060 Ti, RTX 4060 | `10` | `20` | ~4.2 GB |
+  | 10 GB | RTX 3080 | `15` | `25` | ~5.6 GB |
+  | 12 GB | RTX 3080 Ti, RTX 4070 | `19` | `27` | ~6.4 GB |
+  | 16 GB+ | RTX 4080, A4000 | `27` | `32` | ~8.3 GB（フル GPU）|
 
   > ⚠️ 値を高く設定しすぎると（VRAM 容量を超えた場合）**CUDA Out-Of-Memory (OOM)** が発生します。
   > 計算式：`(N_GPU_LAYERS_LLAMA3 × 140 MB) + (N_GPU_LAYERS_SEC × 140 MB) < GPU VRAM × 70%`
@@ -101,11 +101,11 @@ macOSバージョンとは異なり、このNVIDIAプロジェクトでは、ロ
 ## トラブルシューティング
 
 - **GPUが検出されない / コンテナが起動しない**: NVIDIA Container Toolkit がホスト上に正しくインストールされ設定されているか確認してください。コンテナは `NVIDIA_VISIBLE_DEVICES=all` パラメータと連携して GPU リソースを使用します。
-- **メモリ不足 (OOM) / 頻繁なクラッシュ**: 各 Q4_K_M 8B モデルには **32 個の transformer 層**があり、1層あたり約 0.14 GB の VRAM を消費します。デフォルト設定（`N_GPU_LAYERS_LLAMA3=10`、`N_GPU_LAYERS_SEC=20`）で合計約 4.2 GBを使用します。引き続き OOM の場合は、`docker-compose.yml` の値を編集してください：
+- **メモリ不足 (OOM) / 頻繁なクラッシュ**: 各 Q4_K_M 8B モデルには **32 個の transformer 層**があり、1層あたり約 0.14 GB の VRAM を消費します。デフォルト設定（`N_GPU_LAYERS_LLAMA3=5`、`N_GPU_LAYERS_SEC=15`）で合計約 2.8 GBを使用します。引き続き OOM の場合は、`docker-compose.yml` の値を編集してください：
   ```yaml
   environment:
-    - N_GPU_LAYERS_LLAMA3=10   # OOM が続く場合は 5 に減らしてください
-    - N_GPU_LAYERS_SEC=20      # OOM が続く場合は 15 に減らしてください
+    - N_GPU_LAYERS_LLAMA3=5    # OOM が続く場合は 3 に減らしてください
+    - N_GPU_LAYERS_SEC=15      # OOM が続く場合は 10 に減らしてください
   ```
 - **モデルのダウンロードに失敗する**: 最初の構築中にネットワークの問題などで失敗した場合は、プロセスを再開するか、`./download_models.sh` を手動で実行できます。
 
@@ -116,6 +116,39 @@ macOSバージョンとは異なり、このNVIDIAプロジェクトでは、ロ
   docker exec -it security-app-gpu python ingest_security_docs.py
   ```
 - **自動ログ翻訳・処理**: `translate_logs.py` は、ログのバッチ処理や言語間変換テストを実行するためのテンプレートを提供します。上記と同様にコンテナ内で実行できます。
+
+## アクセス制御 — Nginx htpasswd ユーザー管理
+
+アプリケーションは Nginx の HTTP Basic Authentication で保護されています。`add_user.sh` を使用して認証情報を管理します。変更はコンテナを再起動せずに即座に反映されます。
+
+> **初回セットアップ** — 実行権限を一度だけ付与してください:
+> ```bash
+> chmod +x add_user.sh
+> ```
+
+### ユーザーの追加 / 更新
+
+```bash
+# 対話形式でパスワードを入力（シェル履歴に残らないため推奨）
+./add_user.sh add admin
+
+# パスワードを直接指定
+./add_user.sh add alice secret123
+```
+
+### ユーザーの削除
+
+```bash
+./add_user.sh del alice
+```
+
+### ユーザー一覧の表示
+
+```bash
+./add_user.sh list
+```
+
+> `add` または `del` 実行後、スクリプトは自動的に `nginx -s reload` を送信し、既存の接続を切断することなく変更を適用します。
 
 ---
 
