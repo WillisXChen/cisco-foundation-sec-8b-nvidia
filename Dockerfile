@@ -2,6 +2,9 @@
 # 我們需要 devel 版本因為安裝 llama-cpp-python 時需要編譯 CUDA 相關的 C/C++ 程式碼
 FROM nvidia/cuda:12.6.3-devel-ubuntu24.04
 
+# 切換為 root 使用者執行後續指令 (確保權限足夠)
+USER root
+
 # 設定環境變數以防止 apt 安裝過程中出現互動式提示
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -35,9 +38,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 # 安裝 wheel 與編譯所需的基本 py 套件
 RUN pip install --no-cache-dir --upgrade pip wheel setuptools
 
-# 設定環境變數以啟用 llama-cpp-python 的 CUDA (cuBLAS) 支援
+# 設定環境變數以啟用 llama-cpp-python 的 CUDA 支援
+# 註: 新版 llama.cpp 已棄用 LLAMA_CUBLAS，改用 GGML_CUDA
 # 必須明確指出 nvcc 的編譯器路徑，否則在部分 24.04 環境下 wheel 會找不到 CUDA
-ENV CMAKE_ARGS="-DLLAMA_CUBLAS=on -DCUDAToolkit_ROOT=/usr/local/cuda"
+ENV CMAKE_ARGS="-DGGML_CUDA=on -DCUDAToolkit_ROOT=/usr/local/cuda"
 ENV FORCE_CMAKE=1
 ENV CC=/usr/bin/gcc
 ENV CXX=/usr/bin/g++
