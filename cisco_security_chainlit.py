@@ -263,11 +263,11 @@ async def main(message: cl.Message):
             usage_main = {"prompt_tokens": p_tokens, "completion_tokens": c_tokens, "total_tokens": p_tokens + c_tokens}
             
         token_info_main = (
-            f"\n\n---\n"
             f"*⚡ Tokens: {usage_main.get('total_tokens', 0)} "
             f"(輸入: {usage_main.get('prompt_tokens', 0)} | 輸出: {usage_main.get('completion_tokens', 0)}) "
             f"· 🕐 Thought for {gen_elapsed:.1f} seconds*"
         )
+        await response_msg.stream_token("\n\n---\n")
         await response_msg.stream_token(token_info_main)
         
         await response_msg.update() # 結束 Token 串流
@@ -317,11 +317,11 @@ async def main(message: cl.Message):
                     trans_usage = {"prompt_tokens": tp_tokens, "completion_tokens": tc_tokens, "total_tokens": tp_tokens + tc_tokens}
                 
                 trans_token_info = (
-                    f"\n\n---\n"
                     f"*⚡ Tokens: {trans_usage.get('total_tokens', 0)} "
                     f"(輸入: {trans_usage.get('prompt_tokens', 0)} | 輸出: {trans_usage.get('completion_tokens', 0)}) "
                     f"· 🕐 Thought for {trans_elapsed:.1f} seconds*"
                 )
+                await trans_msg.stream_token("\n\n---\n")
                 await trans_msg.stream_token(trans_token_info)
                 
                 await trans_msg.update()

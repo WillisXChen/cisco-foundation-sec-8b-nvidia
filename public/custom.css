@@ -1,7 +1,8 @@
 /* ====================================================
    Cisco Foundation-Sec 8B — Custom Avatar / UI Styles
    Maintainer: Willis Chen <misweyu2007@gmail.com>
-   Sci-Fi / Cyberpunk HUD Theme v2.0
+   Sci-Fi / Cyberpunk HUD Theme v3.0
+   顏色全面改由 theme.json CSS 變數控制
    ==================================================== */
 
 /* ===== 科幻動態背景：格線 + 掃描線 + 霓虹光 ===== */
@@ -35,11 +36,15 @@
 
   0%,
   100% {
-    box-shadow: 0 0 6px 1px rgba(0, 255, 255, 0.15), 0 0 18px 2px rgba(0, 255, 255, 0.06);
+    box-shadow:
+      0 0 6px 1px hsl(var(--ring) / 0.15),
+      0 0 18px 2px hsl(var(--ring) / 0.06);
   }
 
   50% {
-    box-shadow: 0 0 12px 3px rgba(0, 255, 255, 0.30), 0 0 32px 6px rgba(0, 255, 255, 0.12);
+    box-shadow:
+      0 0 12px 3px hsl(var(--ring) / 0.30),
+      0 0 32px 6px hsl(var(--ring) / 0.12);
   }
 }
 
@@ -48,11 +53,11 @@
 
   0%,
   100% {
-    border-color: rgba(0, 255, 255, 0.25);
+    border-color: hsl(var(--ring) / 0.25);
   }
 
   50% {
-    border-color: rgba(0, 255, 255, 0.60);
+    border-color: hsl(var(--ring) / 0.60);
   }
 }
 
@@ -73,12 +78,12 @@
 body,
 #root,
 .cl-root {
-  background-color: #030c18 !important;
+  background-color: hsl(var(--background)) !important;
   background-image:
-    linear-gradient(rgba(0, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 255, 0.04) 1px, transparent 1px),
-    radial-gradient(ellipse at 20% 50%, rgba(0, 80, 160, 0.18) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(0, 200, 255, 0.10) 0%, transparent 50%) !important;
+    linear-gradient(hsl(var(--ring) / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--ring) / 0.04) 1px, transparent 1px),
+    radial-gradient(ellipse at 20% 50%, hsl(var(--primary) / 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, hsl(var(--ring) / 0.08) 0%, transparent 50%) !important;
   background-size: 60px 60px, 60px 60px, 100% 100%, 100% 100% !important;
   animation: gridScroll 8s linear infinite !important;
 }
@@ -93,7 +98,7 @@ body::before {
   height: 3px;
   background: linear-gradient(to bottom,
       transparent 0%,
-      rgba(0, 255, 255, 0.06) 50%,
+      hsl(var(--ring) / 0.06) 50%,
       transparent 100%);
   z-index: 9999;
   pointer-events: none;
@@ -106,8 +111,8 @@ body::after {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(circle at 0% 0%, rgba(0, 200, 255, 0.08) 0%, transparent 35%),
-    radial-gradient(circle at 100% 100%, rgba(0, 80, 200, 0.08) 0%, transparent 35%);
+    radial-gradient(circle at 0% 0%, hsl(var(--primary) / 0.08) 0%, transparent 35%),
+    radial-gradient(circle at 100% 100%, hsl(var(--ring) / 0.06) 0%, transparent 35%);
   pointer-events: none;
   z-index: 0;
 }
@@ -118,17 +123,17 @@ body::after {
 [class*="step"],
 [class*="Step"] {
   background: linear-gradient(135deg,
-      rgba(0, 20, 40, 0.75) 0%,
-      rgba(0, 30, 55, 0.65) 100%) !important;
+      hsl(var(--card) / 0.75) 0%,
+      hsl(var(--card) / 0.65) 100%) !important;
   backdrop-filter: blur(12px) saturate(1.4) !important;
   -webkit-backdrop-filter: blur(12px) saturate(1.4) !important;
-  border: 1px solid rgba(0, 255, 255, 0.18) !important;
-  border-radius: 12px !important;
+  border: 1px solid hsl(var(--border) / 0.60) !important;
+  border-radius: var(--radius) !important;
   animation: borderGlow 3s ease-in-out infinite !important;
   box-shadow:
-    0 0 8px rgba(0, 255, 255, 0.08),
-    0 4px 24px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(0, 255, 255, 0.08) !important;
+    0 0 8px hsl(var(--ring) / 0.08),
+    0 4px 24px hsl(var(--background) / 0.45),
+    inset 0 1px 0 hsl(var(--ring) / 0.08) !important;
   transition: box-shadow 0.3s ease, border-color 0.3s ease !important;
   align-items: flex-start !important;
 }
@@ -136,20 +141,20 @@ body::after {
 [class*="message"]:hover,
 [class*="Message"]:hover {
   box-shadow:
-    0 0 18px rgba(0, 255, 255, 0.20),
-    0 4px 32px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(0, 255, 255, 0.15) !important;
-  border-color: rgba(0, 255, 255, 0.40) !important;
+    0 0 18px hsl(var(--ring) / 0.20),
+    0 4px 32px hsl(var(--background) / 0.55),
+    inset 0 1px 0 hsl(var(--ring) / 0.15) !important;
+  border-color: hsl(var(--ring) / 0.40) !important;
 }
 
-/* ===== 使用者訊息泡泡：略偏青綠科幻色 ===== */
+/* ===== 使用者訊息泡泡：略偏主色科幻色 ===== */
 [class*="userMessage"],
 [class*="user-message"],
 [class*="UserMessage"] {
   background: linear-gradient(135deg,
-      rgba(0, 40, 60, 0.80) 0%,
-      rgba(0, 60, 80, 0.70) 100%) !important;
-  border-color: rgba(0, 200, 220, 0.30) !important;
+      hsl(var(--accent) / 0.50) 0%,
+      hsl(var(--accent) / 0.40) 100%) !important;
+  border-color: hsl(var(--primary) / 0.30) !important;
 }
 
 /* ===== 主聊天區域背景 ===== */
@@ -166,23 +171,23 @@ main,
 [class*="Input"],
 textarea,
 input[type="text"] {
-  background: rgba(0, 15, 30, 0.85) !important;
-  border: 1px solid rgba(0, 255, 255, 0.25) !important;
-  border-radius: 10px !important;
-  color: #c0f0ff !important;
+  background: hsl(var(--background) / 0.85) !important;
+  border: 1px solid hsl(var(--input) / 0.80) !important;
+  border-radius: var(--radius) !important;
+  color: hsl(var(--foreground)) !important;
   box-shadow:
-    0 0 8px rgba(0, 255, 255, 0.06),
-    inset 0 1px 0 rgba(0, 255, 255, 0.05) !important;
+    0 0 8px hsl(var(--ring) / 0.06),
+    inset 0 1px 0 hsl(var(--ring) / 0.05) !important;
   transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
 }
 
 [class*="input"]:focus,
 [class*="Input"]:focus,
 textarea:focus {
-  border-color: rgba(0, 255, 255, 0.60) !important;
+  border-color: hsl(var(--ring) / 0.60) !important;
   box-shadow:
-    0 0 16px rgba(0, 255, 255, 0.20),
-    inset 0 1px 0 rgba(0, 255, 255, 0.10) !important;
+    0 0 16px hsl(var(--ring) / 0.20),
+    inset 0 1px 0 hsl(var(--ring) / 0.10) !important;
   outline: none !important;
 }
 
@@ -192,11 +197,11 @@ textarea:focus {
 [class*="composer"],
 [class*="Composer"] {
   background: linear-gradient(180deg,
-      rgba(0, 10, 25, 0.0) 0%,
-      rgba(0, 10, 25, 0.92) 30%) !important;
+      hsl(var(--background) / 0.0) 0%,
+      hsl(var(--background) / 0.92) 30%) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
-  border-top: 1px solid rgba(0, 255, 255, 0.12) !important;
+  border-top: 1px solid hsl(var(--border) / 0.40) !important;
 }
 
 /* ===== 側邊欄：深邃科幻風 ===== */
@@ -204,54 +209,58 @@ textarea:focus {
 [class*="Sidebar"],
 nav {
   background: linear-gradient(180deg,
-      rgba(1, 8, 20, 0.96) 0%,
-      rgba(2, 12, 30, 0.96) 100%) !important;
-  border-right: 1px solid rgba(0, 255, 255, 0.12) !important;
+      hsl(var(--sidebar-background) / 0.96) 0%,
+      hsl(var(--sidebar-background) / 0.96) 100%) !important;
+  border-right: 1px solid hsl(var(--sidebar-border) / 0.60) !important;
   backdrop-filter: blur(8px) !important;
 }
 
 /* ===== Header ===== */
 header {
-  background: rgba(1, 8, 20, 0.92) !important;
-  border-bottom: 1px solid rgba(0, 255, 255, 0.12) !important;
+  background: hsl(var(--background) / 0.92) !important;
+  border-bottom: 1px solid hsl(var(--border) / 0.40) !important;
   backdrop-filter: blur(12px) !important;
-  box-shadow: 0 2px 24px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 0 2px 24px hsl(var(--background) / 0.60) !important;
 }
 
 /* ===== 程式碼區塊：Hacker Terminal 風格 ===== */
 pre,
 code {
-  background: rgba(0, 255, 100, 0.04) !important;
-  border: 1px solid rgba(0, 255, 100, 0.15) !important;
-  border-radius: 8px !important;
-  color: #7fff9e !important;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-  box-shadow: 0 0 10px rgba(0, 255, 100, 0.06) !important;
+  background: hsl(var(--muted) / 0.60) !important;
+  border: 1px solid hsl(var(--border) / 0.80) !important;
+  border-radius: calc(var(--radius) - 2px) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  font-family: var(--font-mono) !important;
+  box-shadow: 0 0 10px hsl(var(--ring) / 0.06) !important;
 }
 
 /* ===== 按鈕：科幻霓虹 CTA ===== */
 button[class*="primary"],
 [class*="sendButton"],
 [class*="send-button"] {
-  background: linear-gradient(135deg, #005577 0%, #007799 100%) !important;
-  border: 1px solid rgba(0, 255, 255, 0.40) !important;
-  color: #00ffff !important;
-  box-shadow: 0 0 12px rgba(0, 255, 255, 0.18) !important;
+  background: linear-gradient(135deg,
+      hsl(var(--primary) / 0.70) 0%,
+      hsl(var(--primary)) 100%) !important;
+  border: 1px solid hsl(var(--ring) / 0.40) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  box-shadow: 0 0 12px hsl(var(--ring) / 0.18) !important;
   transition: all 0.2s ease !important;
 }
 
 button[class*="primary"]:hover,
 [class*="sendButton"]:hover {
-  background: linear-gradient(135deg, #007799 0%, #00aabb 100%) !important;
-  box-shadow: 0 0 24px rgba(0, 255, 255, 0.35) !important;
+  background: linear-gradient(135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--ring) / 1.0) 100%) !important;
+  box-shadow: 0 0 24px hsl(var(--ring) / 0.35) !important;
   transform: translateY(-1px) !important;
 }
 
-/* ===== 文字顏色微調 ===== */
+/* ===== 文字顏色：交給 theme.json 控制 ===== */
 p,
 span,
 li {
-  color: #b8e8f8 !important;
+  color: hsl(var(--foreground)) !important;
 }
 
 h1,
@@ -260,15 +269,15 @@ h3,
 h4,
 h5,
 h6 {
-  color: #00e5ff !important;
-  text-shadow: 0 0 12px rgba(0, 229, 255, 0.35) !important;
+  color: hsl(var(--primary)) !important;
+  text-shadow: 0 0 12px hsl(var(--primary) / 0.35) !important;
 }
 
 /* ===== 引用塊 ===== */
 blockquote {
-  border-left: 3px solid rgba(0, 255, 255, 0.40) !important;
-  background: rgba(0, 255, 255, 0.04) !important;
-  border-radius: 0 8px 8px 0 !important;
+  border-left: 3px solid hsl(var(--ring) / 0.40) !important;
+  background: hsl(var(--ring) / 0.04) !important;
+  border-radius: 0 var(--radius) var(--radius) 0 !important;
 }
 
 /* ===== 捲軸科幻美化 ===== */
@@ -278,20 +287,24 @@ blockquote {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 10, 25, 0.6);
+  background: hsl(var(--background) / 0.60);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #004466 0%, #006688 100%);
+  background: linear-gradient(180deg,
+      hsl(var(--primary) / 0.50) 0%,
+      hsl(var(--primary) / 0.70) 100%);
   border-radius: 3px;
-  box-shadow: 0 0 6px rgba(0, 255, 255, 0.25);
+  box-shadow: 0 0 6px hsl(var(--ring) / 0.25);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #005577 0%, #0099bb 100%);
+  background: linear-gradient(180deg,
+      hsl(var(--primary) / 0.70) 0%,
+      hsl(var(--primary)) 100%);
 }
 
-/* ===== Avatar 尺寸優化（保留舊有設定）===== */
+/* ===== Avatar 尺寸優化 ===== */
 .cl-avatar,
 [class*="avatar"],
 [class*="Avatar"] {
@@ -302,8 +315,8 @@ blockquote {
   border-radius: 50% !important;
   object-fit: cover !important;
   overflow: hidden !important;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.30) !important;
-  border: 1px solid rgba(0, 255, 255, 0.30) !important;
+  box-shadow: 0 0 10px hsl(var(--ring) / 0.30) !important;
+  border: 1px solid hsl(var(--ring) / 0.30) !important;
 }
 
 .cl-avatar img,
