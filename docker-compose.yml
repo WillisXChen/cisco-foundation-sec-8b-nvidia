@@ -72,9 +72,6 @@ services:
     # Port 8000 僅對內部 network 開放，由 nginx 代理，不直接暴露至 host
     expose:
       - "8000"
-    depends_on:
-      cisco-foundation-sec-8b-qdrant:
-        condition: service_healthy
 
 networks:
   default:
