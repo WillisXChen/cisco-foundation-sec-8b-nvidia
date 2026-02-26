@@ -1,3 +1,4 @@
+# Maintainer: Willis Chen <misweyu2007@gmail.com>
 import os
 from qdrant_client import QdrantClient
 

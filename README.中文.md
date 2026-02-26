@@ -2,6 +2,8 @@
 
 [![English](https://img.shields.io/badge/English-gray?style=for-the-badge)](README.md) [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-blue?style=for-the-badge)](README.中文.md) [![日本語](https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-gray?style=for-the-badge)](README.日本語.md)
 
+**維護者：[Willis Chen](mailto:misweyu2007@gmail.com)**
+
 本專案是一個部署在 **NVIDIA GPU** 上的中英雙語資安分析智能助手。透過整合 [Chainlit](https://docs.chainlit.io/) 提供現代化的互動介面，並在全容器化的 Docker 架構下結合多個大型語言模型 (LLMs) 與 Qdrant 向量資料庫，實現了專業的資安日誌分析與 RAG (檢索增強生成) 應用。
 
 ## 開發與運行環境
@@ -34,7 +36,27 @@
 ## 系統需求
 
 - **作業系統**：強烈建議使用 Linux/Ubuntu。
-- **硬體效能**：具備足夠 VRAM 容量的 NVIDIA GPU (建議至少 16GB 以上，取決於模型大小)。
+- **硬體效能**：具備足夠 VRAM 的 NVIDIA GPU。兩個 Q4_K_M 8B 模型在預設的 GPU 層數設定下，合計約需要 **4–5 GB VRAM**。最低需求為 **6 GB VRAM**（例如 RTX 2060）；建議 8 GB 以上以保留餘裕。
+- **GPU 層數設定** — 可依據自己的 GPU 設備規格，在 `docker-compose.yml` 環境變數中自行調整 GPU 層數：
+
+  **參數說明**（兩個模型各有 32 層，每層約 140 MB）：
+  | 環境變數 | 用途 | 數值含義 |
+  |---|---|---|
+  | `N_GPU_LAYERS_LLAMA3` | 意圖分類 + 結果翻譯 | 設為 GPU 上的層數（最大 32）|
+  | `N_GPU_LAYERS_SEC` | 資安日誌深度分析 | 設為 GPU 上的層數（最大 32）|
+
+  **依據 GPU VRAM 大小的推薦設定值**：
+  | GPU VRAM | 代表型號 | `N_GPU_LAYERS_LLAMA3` | `N_GPU_LAYERS_SEC` | 預估 VRAM 經消 |
+  |---|---|---|---|---|
+  | 6 GB | RTX 2060, RTX 3060 | `10` | `20` | ~4.2 GB |
+  | 8 GB | RTX 3060 Ti, RTX 4060 | `15` | `25` | ~5.6 GB |
+  | 10 GB | RTX 3080 | `20` | `30` | ~7.0 GB |
+  | 12 GB | RTX 3080 Ti, RTX 4070 | `24` | `32` | ~7.8 GB |
+  | 16 GB+ | RTX 4080, A4000 | `32` | `32` | ~9.0 GB（全 GPU）|
+
+  > ⚠️ 數值設定過高（超出 VRAM 容量）將導致 **CUDA Out-Of-Memory (OOM)**。
+  > 動式公式：`(N_GPU_LAYERS_LLAMA3 × 140 MB) + (N_GPU_LAYERS_SEC × 140 MB) < GPU VRAM × 70%`
+
 - **前置作業**：
   - [Docker](https://docs.docker.com/get-docker/) 與 [Docker Compose](https://docs.docker.com/compose/install/)
   - 主機已安裝 [NVIDIA Driver](https://www.nvidia.com/Download/index.aspx)
@@ -79,7 +101,12 @@
 ## 常見問題與排除
 
 - **找不到 GPU / 容器無法啟動**：請確認主機上已正確安裝 NVIDIA Container Toolkit。容器會在 `docker-compose.yml` 中透過 `deploy.resources` 的 `nvidia` 驅動以及環境變數 `NVIDIA_VISIBLE_DEVICES=all` 來取用 GPU。
-- **記憶體不足 (OOM) / 頻繁崩潰**：大型語言模型會消耗大量的顯示記憶體 (VRAM)。若您的 GPU 顯存不足，有可能會遇到崩潰的情況。
+- **記憶體不足 (OOM) / 頻繁崩潰**：每個 Q4_K_M 8B 模型共有 **32 個 transformer 層**，每層約 140 MB VRAM。預設配置（`N_GPU_LAYERS_LLAMA3=10`、`N_GPU_LAYERS_SEC=20`）合計約 4.2 GB。若仍 OOM，請修改 `docker-compose.yml` 中的數值：
+  ```yaml
+  environment:
+    - N_GPU_LAYERS_LLAMA3=10   # 若仍 OOM 可降至 5
+    - N_GPU_LAYERS_SEC=20      # 若仍 OOM 可降至 15
+  ```
 - **模型下載失敗**：如果在構建過程中遇到網路問題，可隨時重新執行構建流程，或手動執行 `./download_models.sh`。
 
 ## 開發與進階功能
@@ -89,3 +116,7 @@
   docker exec -it security-app-gpu python ingest_security_docs.py
   ```
 - **日誌自動翻譯/處理**：`translate_logs.py` 提供了一個批次處理日誌或執行跨語言轉換測試的範本，也可比照上述指令於容器內執行。
+
+---
+
+**維護者：[Willis Chen](mailto:misweyu2007@gmail.com)**

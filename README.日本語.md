@@ -2,6 +2,8 @@
 
 [![English](https://img.shields.io/badge/English-gray?style=for-the-badge)](README.md) [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-gray?style=for-the-badge)](README.中文.md) [![日本語](https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-blue?style=for-the-badge)](README.日本語.md)
 
+**Maintained by [Willis Chen](mailto:misweyu2007@gmail.com)**
+
 本プロジェクトは、**NVIDIA GPU** の強力なパフォーマンスを活用した、バイリンガル（中国語と英語を中心とする）セキュリティ分析のスマートアシスタントです。モダンな対話型インターフェースを提供する [Chainlit](https://docs.chainlit.io/) を統合し、複数の大規模言語モデル (LLM) と Qdrant ベクトルデータベースを Docker という完全にコンテナ化されたエコシステムで組み合わせることで、プロフェッショナルなセキュリティログ分析と RAG (検索拡張生成) アプリケーションを実現しています。
 
 ## 開発・実行環境
@@ -34,7 +36,27 @@
 ## システム要件
 
 - **オペレーティング・システム**: Linux/Ubuntu を強く推奨します。
-- **ハードウェア**: 十分な VRAM 容量を備えた NVIDIA GPU (モデルサイズによりますが、少なくとも 16GB 以上を推奨)。
+- **ハードウェア**: 充分な VRAM を備えた NVIDIA GPU。二つの Q4_K_M 8B モデルはデフォルトの層数設定で合計約 **4〜5 GB VRAM** を消費します。最低 **6 GB VRAM**（例: RTX 2060）が必要ですが、8 GB 以上を推奨します。
+- **GPU 層数設定** — ご自身の GPU スペックに合わせて、`docker-compose.yml` の環境変数で GPU 層数を自由に調整できます：
+
+  **パラメータ説明**（各モデルは 32 層、1 層あたり約 140 MB）：
+  | 環境変数 | 役割 | 値の意味 |
+  |---|---|---|
+  | `N_GPU_LAYERS_LLAMA3` | 意図分類 + 翻訳 | GPU に載せる層数（最大 32）|
+  | `N_GPU_LAYERS_SEC` | セキュリティログの深層分析 | GPU に載せる層数（最大 32）|
+
+  **GPU VRAM サイズ別の推奨設定値**：
+  | GPU VRAM | 代表的な GPU | `N_GPU_LAYERS_LLAMA3` | `N_GPU_LAYERS_SEC` | 推定 VRAM 消費 |
+  |---|---|---|---|---|
+  | 6 GB | RTX 2060, RTX 3060 | `10` | `20` | ~4.2 GB |
+  | 8 GB | RTX 3060 Ti, RTX 4060 | `15` | `25` | ~5.6 GB |
+  | 10 GB | RTX 3080 | `20` | `30` | ~7.0 GB |
+  | 12 GB | RTX 3080 Ti, RTX 4070 | `24` | `32` | ~7.8 GB |
+  | 16 GB+ | RTX 4080, A4000 | `32` | `32` | ~9.0 GB（フル GPU）|
+
+  > ⚠️ 値を高く設定しすぎると（VRAM 容量を超えた場合）**CUDA Out-Of-Memory (OOM)** が発生します。
+  > 計算式：`(N_GPU_LAYERS_LLAMA3 × 140 MB) + (N_GPU_LAYERS_SEC × 140 MB) < GPU VRAM × 70%`
+
 - **前提条件**:
   - [Docker](https://docs.docker.com/get-docker/) & [Docker Compose](https://docs.docker.com/compose/install/)
   - ホスト上に [NVIDIA ドライバー](https://www.nvidia.com/Download/index.aspx) がインストールされていること。
@@ -79,7 +101,12 @@ macOSバージョンとは異なり、このNVIDIAプロジェクトでは、ロ
 ## トラブルシューティング
 
 - **GPUが検出されない / コンテナが起動しない**: NVIDIA Container Toolkit がホスト上に正しくインストールされ設定されているか確認してください。コンテナは `NVIDIA_VISIBLE_DEVICES=all` パラメータと連携して GPU リソースを使用します。
-- **メモリ不足 (OOM) / 頻繁なクラッシュ**: 大規模言語モデルは大量のビデオメモリ (VRAM) を消費します。GPU に十分な VRAM がない場合、クラッシュが発生する可能性があります。
+- **メモリ不足 (OOM) / 頻繁なクラッシュ**: 各 Q4_K_M 8B モデルには **32 個の transformer 層**があり、1層あたり約 0.14 GB の VRAM を消費します。デフォルト設定（`N_GPU_LAYERS_LLAMA3=10`、`N_GPU_LAYERS_SEC=20`）で合計約 4.2 GBを使用します。引き続き OOM の場合は、`docker-compose.yml` の値を編集してください：
+  ```yaml
+  environment:
+    - N_GPU_LAYERS_LLAMA3=10   # OOM が続く場合は 5 に減らしてください
+    - N_GPU_LAYERS_SEC=20      # OOM が続く場合は 15 に減らしてください
+  ```
 - **モデルのダウンロードに失敗する**: 最初の構築中にネットワークの問題などで失敗した場合は、プロセスを再開するか、`./download_models.sh` を手動で実行できます。
 
 ## 開発と高度な機能
@@ -89,3 +116,7 @@ macOSバージョンとは異なり、このNVIDIAプロジェクトでは、ロ
   docker exec -it security-app-gpu python ingest_security_docs.py
   ```
 - **自動ログ翻訳・処理**: `translate_logs.py` は、ログのバッチ処理や言語間変換テストを実行するためのテンプレートを提供します。上記と同様にコンテナ内で実行できます。
+
+---
+
+**Maintained by [Willis Chen](mailto:misweyu2007@gmail.com)**

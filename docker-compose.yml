@@ -1,3 +1,4 @@
+# Maintainer: Willis Chen <misweyu2007@gmail.com>
 services:
   # 向量資料庫：Qdrant (負責資安情資儲存與檢索)
   cisco-foundation-sec-8b-qdrant:
@@ -32,7 +33,17 @@ services:
 
       # 應用程式參數
       - QDRANT_URL=http://cisco-foundation-sec-8b-qdrant:6333
-      - MODEL_PATH=/app/models/foundation-sec-8b # 假設模型放在此路徑
+      - MODEL_SEC_PATH=/app/models/foundation-sec-8b-q4_k_m.gguf
+      - MODEL_LLAMA3_PATH=/app/models/llama-3-taiwan-8b-instruct-q4_k_m.gguf
+
+      # RTX 2060 6GB VRAM 分配策略 (Q4_K_M 8B 各有 32 層，每層約 140MB)：
+      # - 兩個模型全部上 GPU 需要約 9GB → 遠超 6GB 上限
+      # - Llama-3-Taiwan (分類+翻譯)：10/32 層上 GPU → ~1.4GB（速度優先，品質次之）
+      # - Foundation-Sec (資安分析)：20/32 層上 GPU → ~2.8GB（分析品質優先）
+      # - 合計約 4.2GB，留 ~1.8GB 給 KV cache 與 CUDA context overhead
+      # ⚠️ 若仍 OOM，請將兩個數值各降低 5 再試
+      - N_GPU_LAYERS_LLAMA3=10
+      - N_GPU_LAYERS_SEC=20
 
       # 針對 RTX 2060 6GB 的 Python/CUDA 優化 (防止記憶體碎片化)
       - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -47,7 +58,7 @@ services:
               capabilities: [ gpu ]
 
     # 執行指令 (-w 參數支援熱更新，方便開發)
-    command: chainlit run cisco_security_chainlit.py
+    command: chainlit run cisco_security_chainlit.py --host 0.0.0.0
     ports:
       - "8000:8000"
 

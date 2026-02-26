@@ -1,3 +1,4 @@
+# Maintainer: Willis Chen <misweyu2007@gmail.com>
 # 使用 NVIDIA 官方提供的 CUDA 開發版映像檔作為基底
 # 我們需要 devel 版本因為安裝 llama-cpp-python 時需要編譯 CUDA 相關的 C/C++ 程式碼
 FROM nvidia/cuda:12.6.3-devel-ubuntu24.04

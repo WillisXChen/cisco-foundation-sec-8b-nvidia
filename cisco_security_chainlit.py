@@ -1,3 +1,4 @@
+# Maintainer: Willis Chen <misweyu2007@gmail.com>
 import chainlit as cl
 import os
 from llama_cpp import Llama
@@ -5,8 +6,8 @@ from qdrant_client import QdrantClient
 
 # === Configuration ===
 # 設定預設的模型路徑，可以透過環境變數覆寫
-MODEL_SEC_PATH = os.getenv("MODEL_SEC_PATH", "./models/foundation-sec-8b-q4_k_m.gguf")
-MODEL_LLAMA3_PATH = os.getenv("MODEL_LLAMA3_PATH", "./models/llama-3-taiwan-8b-instruct-q4_k_m.gguf")
+MODEL_SEC_PATH = os.getenv("MODEL_SEC_PATH", "/app/models/foundation-sec-8b-q4_k_m.gguf")
+MODEL_LLAMA3_PATH = os.getenv("MODEL_LLAMA3_PATH", "/app/models/llama-3-taiwan-8b-instruct-q4_k_m.gguf")
 
 # === 全域變數 (Global instances) ===
 # 只在啟動時載入一次模型，避免每次連線都重新載入消耗記憶體與時間
@@ -28,22 +29,54 @@ general_system_message = (
     "You are a helpful AI assistant. Answer the user's questions politely and naturally in Traditional Chinese."
 )
 
-def load_model(model_path: str, context_size: int = 4096):
+# RTX 2060 6GB VRAM 設定：
+# 兩個 8B Q4_K_M 模型各紀4.5GB，同時全層 GPU 會超出 6GB 上限
+# 將 Llama-3-Taiwan 用於分類 + 翻譯，f設為較少 GPU 層 (鋀跟 CPU 協同操作)
+# Foundation-Sec 用於資安分析，給予更多 GPU 層 (它的輸出質量影響較大)
+N_GPU_LAYERS_LLAMA3 = int(os.getenv("N_GPU_LAYERS_LLAMA3", "20"))   # 部分層上 GPU
+N_GPU_LAYERS_SEC    = int(os.getenv("N_GPU_LAYERS_SEC",    "35"))   # 較多層上 GPU
+
+
+def load_model(model_path: str, context_size: int = 4096, n_gpu_layers: int = -1):
     """
-    Load a Llama-3 based model using llama.cpp with Metal (MPS) support.
+    Load a GGUF model via llama-cpp-python.
+
+    Args:
+        model_path:    模型檔案路徑
+        context_size:  Context window 大小
+        n_gpu_layers:  放入 GPU VRAM 的層數 (-1 = 全部)
     """
     if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Model file not found at {model_path}")
+        raise FileNotFoundError(
+            f"[ModelLoader] 找不到模型檔案: {model_path}\n"
+            f"請確認 download_models.sh 已執行，模型已存在於 /app/models/"
+        )
 
-    print(f"Loading model from {model_path}...")
-    llm = Llama(
-        model_path=model_path,
-        n_gpu_layers=-1,      # Metal (GPU) Acceleration on Mac
-        seed=1337,            
-        n_ctx=context_size,   
-        verbose=False,        
-        chat_format="llama-3" 
-    )
+    file_size_mb = os.path.getsize(model_path) / (1024 * 1024)
+    if file_size_mb < 100:
+        raise ValueError(
+            f"[ModelLoader] 模型檔案异常小 ({file_size_mb:.1f} MB)，檢查是否下載不完整: {model_path}"
+        )
+
+    print(f"[ModelLoader] 載入模型: {model_path} ({file_size_mb:.0f} MB) | GPU layers={n_gpu_layers}")
+    try:
+        llm = Llama(
+            model_path=model_path,
+            n_gpu_layers=n_gpu_layers,
+            seed=1337,
+            n_ctx=context_size,
+            verbose=True,         # 開啟詳細輸出，方便從 log 看到 GPU 層分配狀態
+            chat_format="llama-3"
+        )
+    except Exception as e:
+        # 泄露真正的載入錯誤，避免被 __del__ 的 AttributeError 掃居
+        raise RuntimeError(
+            f"[ModelLoader] 模型載入失敗: {model_path}\n"
+            f"原始錯誤: {type(e).__name__}: {e}\n"
+            f"請檢查: 1) GPU VRAM 是否足夠 2) 模型檔案是否完整 3) CUDA driver 是否正常"
+        ) from e
+
+    print(f"[ModelLoader] ✅ 模型載入成功: {os.path.basename(model_path)}")
     return llm
 
 @cl.on_chat_start
@@ -57,9 +90,9 @@ async def on_chat_start():
     try:
         # 載入模型（若尚未載入）
         if llm_llama3 is None:
-            llm_llama3 = load_model(MODEL_LLAMA3_PATH)
+            llm_llama3 = load_model(MODEL_LLAMA3_PATH, n_gpu_layers=N_GPU_LAYERS_LLAMA3)
         if llm_sec is None:
-            llm_sec = load_model(MODEL_SEC_PATH)
+            llm_sec = load_model(MODEL_SEC_PATH, n_gpu_layers=N_GPU_LAYERS_SEC)
         if qdrant_client is None:
             print("Connecting to Qdrant instance...")
             qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")

@@ -1,4 +1,7 @@
+# Maintainer: Willis Chen <misweyu2007@gmail.com>
 chainlit
 qdrant-client
 fastembed
-llama-cpp-python
+# 固定版本以避免 Issue #2104 (AttributeError: 'LlamaModel' object has no attribute 'sampler')
+# 此 bug 在 0.3.x 初始化失敗時會出現，0.3.16 是目前最新穩定版
+llama-cpp-python==0.3.16
