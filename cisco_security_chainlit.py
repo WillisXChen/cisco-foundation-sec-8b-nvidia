@@ -1,6 +1,7 @@
 # Maintainer: Willis Chen <misweyu2007@gmail.com>
 import chainlit as cl
 import os
+import time
 from llama_cpp import Llama
 from qdrant_client import QdrantClient
 
@@ -243,6 +244,7 @@ async def main(message: cl.Message):
         )
 
         usage_main = None
+        gen_start_time = time.time()  # ⏱️ 開始計時主要生成
         for chunk in stream:
             if "usage" in chunk and chunk["usage"]:
                 usage_main = chunk["usage"]
@@ -252,6 +254,7 @@ async def main(message: cl.Message):
                     text_chunk = delta["content"]
                     assistant_response += text_chunk
                     await response_msg.stream_token(text_chunk) # 即時將字串送往前端
+        gen_elapsed = time.time() - gen_start_time  # ⏱️ 結束計時
                     
         # 計算 Tokens 資訊
         if not usage_main:
@@ -259,7 +262,12 @@ async def main(message: cl.Message):
             c_tokens = len(active_llm.tokenize(assistant_response.encode("utf-8")))
             usage_main = {"prompt_tokens": p_tokens, "completion_tokens": c_tokens, "total_tokens": p_tokens + c_tokens}
             
-        token_info_main = f"\n\n---\n*⚡ Tokens: {usage_main.get('total_tokens', 0)} (輸入: {usage_main.get('prompt_tokens', 0)} | 輸出: {usage_main.get('completion_tokens', 0)})*"
+        token_info_main = (
+            f"\n\n---\n"
+            f"*⚡ Tokens: {usage_main.get('total_tokens', 0)} "
+            f"(輸入: {usage_main.get('prompt_tokens', 0)} | 輸出: {usage_main.get('completion_tokens', 0)}) "
+            f"· 🕐 Thought for {gen_elapsed:.1f} seconds*"
+        )
         await response_msg.stream_token(token_info_main)
         
         await response_msg.update() # 結束 Token 串流
@@ -290,6 +298,7 @@ async def main(message: cl.Message):
                 await trans_msg.update()
 
                 trans_usage = None
+                trans_start_time = time.time()  # ⏱️ 開始計時翻譯生成
                 for chunk in trans_stream:
                     if "usage" in chunk and chunk["usage"]:
                         trans_usage = chunk["usage"]
@@ -299,6 +308,7 @@ async def main(message: cl.Message):
                             text_chunk = delta["content"]
                             chinese_response += text_chunk
                             await trans_msg.stream_token(text_chunk)
+                trans_elapsed = time.time() - trans_start_time  # ⏱️ 結束計時
                 
                 # 計算 Tokens 資訊
                 if not trans_usage:
@@ -306,7 +316,12 @@ async def main(message: cl.Message):
                     tc_tokens = len(llm_llama3.tokenize(chinese_response.encode("utf-8")))
                     trans_usage = {"prompt_tokens": tp_tokens, "completion_tokens": tc_tokens, "total_tokens": tp_tokens + tc_tokens}
                 
-                trans_token_info = f"\n\n---\n*⚡ Tokens: {trans_usage.get('total_tokens', 0)} (輸入: {trans_usage.get('prompt_tokens', 0)} | 輸出: {trans_usage.get('completion_tokens', 0)})*"
+                trans_token_info = (
+                    f"\n\n---\n"
+                    f"*⚡ Tokens: {trans_usage.get('total_tokens', 0)} "
+                    f"(輸入: {trans_usage.get('prompt_tokens', 0)} | 輸出: {trans_usage.get('completion_tokens', 0)}) "
+                    f"· 🕐 Thought for {trans_elapsed:.1f} seconds*"
+                )
                 await trans_msg.stream_token(trans_token_info)
                 
                 await trans_msg.update()
