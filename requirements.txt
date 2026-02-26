@@ -1,0 +1,4 @@
+chainlit
+qdrant-client
+fastembed
+llama-cpp-python

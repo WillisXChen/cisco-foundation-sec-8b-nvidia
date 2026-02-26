@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+ai_env/
+env/
+.env
+
+# Models (Models are downloaded via script in Dockerfile, no need to copy from host)
+models/
+*.gguf
+
+# Qdrant Vector Database Storage (Mounted via volume, no need to copy into container)
+qdrant_storage/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Documentation
+README*
