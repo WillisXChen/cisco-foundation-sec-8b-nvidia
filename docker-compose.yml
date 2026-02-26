@@ -1,14 +1,21 @@
 services:
-  cisco-foundation-sec-8b-macos-qdrant:
-    image: qdrant/qdrant:latest
-    container_name: cisco-foundation-sec-8b-macos-qdrant
+  # 向量資料庫：Qdrant (負責資安情資儲存與檢索)
+  cisco-foundation-sec-8b-qdrant:
+    image: qdrant/qdrant:v1.17.0 # 建議使用具體版本號以確保校務系統穩定
+    container_name: cisco-foundation-sec-8b-qdrant
     ports:
       - "6333:6333"
       - "6334:6334"
     volumes:
       - ./qdrant_storage:/qdrant/storage
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:6333/healthz" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
+  # 資安應用程式：Chainlit + Foundation-Sec-8B (GPU 加速)
   security-app:
     build: .
     container_name: security-app-gpu
@@ -16,19 +23,36 @@ services:
     volumes:
       - .:/app
     environment:
-      # 這個環境變數告訴 NVIDIA Container Toolkit 我們的對象是所有 GPU
+      # NVIDIA 容器配置
       - NVIDIA_VISIBLE_DEVICES=all
-      - QDRANT_URL=http://cisco-foundation-sec-8b-macos-qdrant:6333
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+      # 應用程式參數
+      - QDRANT_URL=http://cisco-foundation-sec-8b-qdrant:6333
+      - MODEL_PATH=/app/models/foundation-sec-8b # 假設模型放在此路徑
+
+      # 針對 RTX 2060 6GB 的 Python/CUDA 優化 (防止記憶體碎片化)
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+    # 硬體資源分配：將 GPU 穿透進容器
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [ gpu ] # 啟用 GPU 透傳
+              capabilities: [ gpu ]
+
+    # 確保 Qdrant 啟動成功後才啟動 App
     depends_on:
-      - cisco-foundation-sec-8b-macos-qdrant
-    # 執行 Chainlit Server (若需要除錯可換成 bash 或 tail -f /dev/null)
+      cisco-foundation-sec-8b-qdrant:
+        condition: service_healthy
+
+    # 執行指令 (-w 參數支援熱更新，方便開發)
     command: chainlit run cisco_security_chainlit.py -w
     ports:
       - "8000:8000"
+
+networks:
+  default:
+    name: cisco_sec_net
