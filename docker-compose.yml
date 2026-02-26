@@ -17,6 +17,22 @@ services:
       start_period: 15s
     restart: unless-stopped
 
+  # 初始化：確保 nginx/.htpasswd 為檔案而非目錄 (gitignore 情境下首次部署使用)
+  htpasswd-init:
+    image: busybox:stable
+    container_name: security-app-htpasswd-init
+    volumes:
+      - ./nginx:/nginx
+    # 若 .htpasswd 不存在（或被誤建成目錄）就自動建立空白檔案
+    command: >
+      sh -c "
+        if [ ! -f /nginx/.htpasswd ]; then
+          touch /nginx/.htpasswd;
+          echo '⚠️  nginx/.htpasswd 不存在，已自動建立空白檔案。請執行 ./add_user.sh add <username> 新增帳號。';
+        fi
+      "
+    restart: "no"
+
   # 反向代理：Nginx (提供 htpasswd 基本驗證保護)
   nginx:
     image: nginx:alpine
@@ -28,7 +44,10 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/.htpasswd:/etc/nginx/.htpasswd:ro
     depends_on:
-      - security-app
+      htpasswd-init:
+        condition: service_completed_successfully
+      security-app:
+        condition: service_started
 
   # 資安應用程式：Chainlit + Foundation-Sec-8B (GPU 加速)
   security-app:
