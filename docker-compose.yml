@@ -46,13 +46,8 @@ services:
               count: 1
               capabilities: [ gpu ]
 
-    # 確保 Qdrant 啟動成功後才啟動 App
-    depends_on:
-      cisco-foundation-sec-8b-qdrant:
-        condition: service_healthy
-
     # 執行指令 (-w 參數支援熱更新，方便開發)
-    command: chainlit run cisco_security_chainlit.py -w
+    command: chainlit run cisco_security_chainlit.py
     ports:
       - "8000:8000"
 
