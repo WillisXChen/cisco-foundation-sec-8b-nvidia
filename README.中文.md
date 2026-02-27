@@ -1,6 +1,6 @@
 # Cisco Foundation-Sec 8B Native on NVIDIA GPU (雙語資安助手)
 
-[![English](https://img.shields.io/badge/English-gray?style=for-the-badge)](README.md) [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-blue?style=for-the-badge)](README.中文.md) [![日本語](https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-gray?style=for-the-badge)](README.日本語.md)
+[![English](https://img.shields.io/badge/English-gray?style=for-the-badge)](README.md) [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-blue?style=for-the-badge)](README.中文.md) [![日本語](https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-gray?style=for-the-badge)](README.日本語.md) [![简体中文](https://img.shields.io/badge/%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-gray?style=for-the-badge)](README.简体中文.md) [![Español](https://img.shields.io/badge/Espa%C3%B1ol-gray?style=for-the-badge)](README.Español.md) [![한국어](https://img.shields.io/badge/%ED%95%9C%EA%B5%AD%CN%96%B4-gray?style=for-the-badge)](README.한국어.md) [![ภาษาไทย](https://img.shields.io/badge/%E0%B8%A0%E0%B8%B2%E0%B8%A9%E0%B8%B2%E0%B9%84%E0%B8%97%E0%B8%A2-gray?style=for-the-badge)](README.ภาษาไทย.md) [![हिन्दी](https://img.shields.io/badge/%E0%A4%B9%E0%A4%BF%E0%A4%A8%E0%B1%8D%E0%09%A6%E0%A5%80-gray?style=for-the-badge)](README.hindi.md) [![Tiếng Việt](https://img.shields.io/badge/Ti%E1%BA%BFng%20Vi%E1%BB%87t-gray?style=for-the-badge)](README.TiengViet.md)
 
 **維護者：[Willis Chen](mailto:misweyu2007@gmail.com)**
 
@@ -32,6 +32,7 @@
 3. **資安專家模型**：透過專為網路安全領域微調的 **Foundation-Sec-8B**，進行深度的系統與資安日誌分析。
 4. **硬體加速**：在 Docker 內整合 NVIDIA CUDA (`cuBLAS`) 與 `llama-cpp-python`，最大化 NVIDIA 顯示卡的推論效能。
 5. **向量檢索 (RAG)**：使用 **Qdrant** (透過 Docker Compose 部署) 儲存並檢索企業內部安全文件，藉此提升語言模型的分析精準度並減少幻覺 (Hallucinations) 的發生。
+6. **優化使用者體驗**：包含客製化的品牌視覺 (Logo、深色/淺色主題)、在地化的歡迎介面，以及即時追蹤模型生成的思考時間 ("Thought for X seconds") 與 Token 消耗狀況。
 
 ## 系統需求
 
@@ -73,9 +74,11 @@
 ├── Dockerfile                  # 用於構建支援 CUDA 的 Python 環境
 ├── models/                     # GGUF 模型儲存路徑 (自動下載)
 ├── qdrant_storage/             # Qdrant 向量資料庫的持久化儲存目錄
+├── public/                     # 客製化 UI 資源 (Logo、CSS、主題設定)
 ├── cisco_security_chainlit.py  # Chainlit 應用程式主檔案
+├── playbooks.json              # 統一管理的資安 SOP，供 RAG 寫入讀取使用
 ├── download_models.sh          # 自動下載所需的 HuggingFace GGUF 模型
-└── (其他 Python 腳本與設定檔)
+└── htpasswd_user.sh            # Nginx 身份驗證帳號管理腳本
 ```
 
 ## 執行方式
@@ -111,7 +114,7 @@
 
 ## 開發與進階功能
 
-- **RAG 文件匯入**：若要將新的基礎資安文件匯入至 Qdrant 知識庫中，您可以在容器內部執行資料處理腳本：
+- **RAG 文件匯入**：基礎的資安 SOP 統一記錄於 `playbooks.json` 中。若要將這些文件匯入至 Qdrant 知識庫中，您可以在容器內部執行資料處理腳本：
   ```bash
   docker exec -it security-app-gpu python ingest_security_docs.py
   ```
@@ -119,33 +122,33 @@
 
 ## 存取控制 — Nginx htpasswd 帳號管理
 
-應用程式透過 Nginx HTTP Basic Authentication 進行保護。使用 `add_user.sh` 管理帳號，每次操作後 nginx 會自動 reload，**不會中斷現有連線**。
+應用程式透過 Nginx HTTP Basic Authentication 進行保護。使用 `htpasswd_user.sh` 管理帳號，每次操作後 nginx 會自動 reload，**不會中斷現有連線**。
 
 > **首次使用** — 只需賦予執行權限一次：
 > ```bash
-> chmod +x add_user.sh
+> chmod +x htpasswd_user.sh
 > ```
 
 ### 新增 / 更新帳號
 
 ```bash
 # 互動式輸入密碼（推薦，密碼不會留在 shell 歷史紀錄）
-./add_user.sh add admin
+./htpasswd_user.sh add admin
 
 # 直接帶入密碼
-./add_user.sh add alice secret123
+./htpasswd_user.sh add alice secret123
 ```
 
 ### 刪除帳號
 
 ```bash
-./add_user.sh del alice
+./htpasswd_user.sh del alice
 ```
 
 ### 列出所有帳號
 
 ```bash
-./add_user.sh list
+./htpasswd_user.sh list
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Cisco Foundation-Sec 8B on NVIDIA GPU (Bilingual Security Assistant)
 
-[![English](https://img.shields.io/badge/English-blue?style=for-the-badge)](README.md) [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-gray?style=for-the-badge)](README.中文.md) [![日本語](https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-gray?style=for-the-badge)](README.日本語.md)
+[![English](https://img.shields.io/badge/English-blue?style=for-the-badge)](README.md) [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-gray?style=for-the-badge)](README.中文.md) [![日本語](https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-gray?style=for-the-badge)](README.日本語.md) [![简体中文](https://img.shields.io/badge/%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-gray?style=for-the-badge)](README.简体中文.md) [![Español](https://img.shields.io/badge/Espa%C3%B1ol-gray?style=for-the-badge)](README.Español.md) [![한국어](https://img.shields.io/badge/%ED%95%9C%EA%B5%AD%EC%96%B4-gray?style=for-the-badge)](README.한국어.md) [![ภาษาไทย](https://img.shields.io/badge/%E0%B8%A0%E0%B8%B2%E0%B8%A9%E0%B8%B2%E0%B9%84%E0%B8%97%E0%B8%A2-gray?style=for-the-badge)](README.ภาษาไทย.md) [![हिन्दी](https://img.shields.io/badge/%E0%A4%B9%E0%A4%BF%E0%A4%A8%E0%B1%8D%E0%09%A6%E0%A5%80-gray?style=for-the-badge)](README.hindi.md) [![Tiếng Việt](https://img.shields.io/badge/Ti%E1%BA%BFng%20Vi%E1%BB%87t-gray?style=for-the-badge)](README.TiengViet.md)
 
 **Maintained by [Willis Chen](mailto:misweyu2007@gmail.com)**
 
@@ -32,6 +32,7 @@ This project is a bilingual (Chinese/English) security analysis smart assistant 
 3. **Security Expert**: Performs in-depth system and security log analysis through **Foundation-Sec-8B**, fine-tuned specifically for the cybersecurity domain.
 4. **Hardware Acceleration**: Integrates NVIDIA CUDA (`cuBLAS`) with `llama-cpp-python` within Docker to maximize inference performance on NVIDIA graphics cards.
 5. **Vector Retrieval (RAG)**: Uses **Qdrant** (deployed via Docker Compose) to store and retrieve internal enterprise security documents, thereby enhancing the language model's analysis accuracy and reducing hallucinations.
+6. **Polished User Experience**: Features custom branding with bespoke logos, dark/light themes (`public/theme.json`), localized welcome screens, and real-time inference latency tracking ("Thought for X seconds").
 
 ## System Requirements
 
@@ -73,9 +74,11 @@ Unlike the macOS version, this NVIDIA project uses a fully containerized archite
 ├── Dockerfile                  # Builds the CUDA-enabled Python environment
 ├── models/                     # GGUF model storage (downloaded automatically)
 ├── qdrant_storage/             # Persistent storage directory for Qdrant vector database
+├── public/                     # Custom branding assets (logos, CSS, themes)
 ├── cisco_security_chainlit.py  # Main Chainlit application file
+├── playbooks.json              # Centralized security SOPs for RAG ingestion
 ├── download_models.sh          # Auto-downloads required HuggingFace GGUF models
-└── (Other Python scripts and configuration files)
+└── htpasswd_user.sh            # Nginx basic auth user management script
 ```
 
 ## How to Run
@@ -111,7 +114,7 @@ Unlike the macOS version, this NVIDIA project uses a fully containerized archite
 
 ## Development and Advanced Features
 
-- **RAG Text Ingestion**: To import new base security documents into the Qdrant knowledge base, you can execute the ingestion script inside the container:
+- **RAG Text Ingestion**: Security SOPs are centrally managed in `playbooks.json`. To import these documents into the Qdrant knowledge base, you can execute the ingestion script inside the container:
   ```bash
   docker exec -it security-app-gpu python ingest_security_docs.py
   ```
@@ -119,33 +122,33 @@ Unlike the macOS version, this NVIDIA project uses a fully containerized archite
 
 ## Access Control — Nginx htpasswd User Management
 
-The application is protected by HTTP Basic Authentication via Nginx. Use `add_user.sh` to manage credentials. Changes take effect immediately without restarting any container.
+The application is protected by HTTP Basic Authentication via Nginx. Use `htpasswd_user.sh` to manage credentials. Changes take effect immediately without restarting any container.
 
 > **First-time setup** — grant execute permission once:
 > ```bash
-> chmod +x add_user.sh
+> chmod +x htpasswd_user.sh
 > ```
 
 ### Add / Update a user
 
 ```bash
 # Interactive (password hidden from shell history — recommended)
-./add_user.sh add admin
+./htpasswd_user.sh add admin
 
 # Non-interactive
-./add_user.sh add alice secret123
+./htpasswd_user.sh add alice secret123
 ```
 
 ### Delete a user
 
 ```bash
-./add_user.sh del alice
+./htpasswd_user.sh del alice
 ```
 
 ### List all users
 
 ```bash
-./add_user.sh list
+./htpasswd_user.sh list
 ```
 
 > After each `add` or `del`, the script automatically sends `nginx -s reload` to apply changes gracefully without dropping active connections.

@@ -1,6 +1,6 @@
 # Cisco Foundation-Sec 8B Native on NVIDIA GPU (バイリンガル・セキュリティ・アシスタント)
 
-[![English](https://img.shields.io/badge/English-gray?style=for-the-badge)](README.md) [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-gray?style=for-the-badge)](README.中文.md) [![日本語](https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-blue?style=for-the-badge)](README.日本語.md)
+[![English](https://img.shields.io/badge/English-gray?style=for-the-badge)](README.md) [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-gray?style=for-the-badge)](README.中文.md) [![日本語](https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-blue?style=for-the-badge)](README.日本語.md) [![简体中文](https://img.shields.io/badge/%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-gray?style=for-the-badge)](README.简体中文.md) [![Español](https://img.shields.io/badge/Espa%C3%B1ol-gray?style=for-the-badge)](README.Español.md) [![한국어](https://img.shields.io/badge/%ED%95%9C%EA%B5%AD%EC%96%B4-gray?style=for-the-badge)](README.한국어.md) [![ภาษาไทย](https://img.shields.io/badge/%E0%B8%A0%E0%B8%B2%E0%B8%A9%E0%B8%B2%E0%B9%84%E0%B8%97%E0%B8%A2-gray?style=for-the-badge)](README.ภาษาไทย.md) [![हिन्दी](https://img.shields.io/badge/%E0%A4%B9%E0%A4%BF%E0%A4%A8%E0%B1%8D%E0%09%A6%E0%A5%80-gray?style=for-the-badge)](README.hindi.md) [![Tiếng Việt](https://img.shields.io/badge/Ti%E1%BA%BFng%20Vi%E1%BB%87t-gray?style=for-the-badge)](README.TiengViet.md)
 
 **Maintained by [Willis Chen](mailto:misweyu2007@gmail.com)**
 
@@ -32,6 +32,7 @@
 3. **セキュリティ専門家モデル**: サイバーセキュリティ領域に特化してファインチューニングされた **Foundation-Sec-8B** を介して、綿密なシステムおよびセキュリティログ分析を実行します。
 4. **ハードウェア・アクセラレーション**: NVIDIA のグラフィックカード上で推論パフォーマンスを最大化するために、Docker 内で NVIDIA CUDA (`cuBLAS`) と `llama-cpp-python` を統合しています。
 5. **ベクトル検索 (RAG)**: Docker Compose 経由で導入された **Qdrant** を利用して社内のセキュリティドキュメントを保存・検索します。これにより言語モデルの分析精度が向上し、ハルシネーション（幻覚）が軽減します。
+6. **最適化されたユーザーエクスペリエンス**: ブランドのカスタムロゴ、ダーク/ライトテーマ、ローカライズされたウェルカム画面に加え、リアルタイムの推論時間追跡（"Thought for X seconds"）やトークン消費量の表示などの機能を備えています。
 
 ## システム要件
 
@@ -73,9 +74,11 @@ macOSバージョンとは異なり、このNVIDIAプロジェクトでは、ロ
 ├── Dockerfile                  # CUDA 対応 Python 環境を構築
 ├── models/                     # GGUF モデル保存用 (自動ダウンロード)
 ├── qdrant_storage/             # Qdrant ベクトルデータベースの永続的ストレージ・ディレクトリ
+├── public/                     # カスタム UI アセット (ロゴ、CSS、テーマ設定)
 ├── cisco_security_chainlit.py  # メインの Chainlit アプリケーションファイル
+├── playbooks.json              # RAG取り込み用の一元管理されたセキュリティSOP
 ├── download_models.sh          # 必要な HuggingFaceのGGUFモデルを自動でダウンロード
-└── (その他の Python スクリプトおよび設定ファイル)
+└── htpasswd_user.sh            # Nginx 認証ユーザー管理スクリプト
 ```
 
 ## 実行方法
@@ -111,7 +114,7 @@ macOSバージョンとは異なり、このNVIDIAプロジェクトでは、ロ
 
 ## 開発と高度な機能
 
-- **RAG テキストのインポート**: 新たな基礎セキュリティドキュメントを Qdrant ナレッジベースにインポートするには、コンテナ内でインポート用スクリプトを実行してください:
+- **RAG テキストのインポート**: セキュリティSOPは `playbooks.json` で一元管理されています。これらのドキュメントを Qdrant ナレッジベースにインポートするには、コンテナ内でインポート用スクリプトを実行してください:
   ```bash
   docker exec -it security-app-gpu python ingest_security_docs.py
   ```
@@ -119,33 +122,33 @@ macOSバージョンとは異なり、このNVIDIAプロジェクトでは、ロ
 
 ## アクセス制御 — Nginx htpasswd ユーザー管理
 
-アプリケーションは Nginx の HTTP Basic Authentication で保護されています。`add_user.sh` を使用して認証情報を管理します。変更はコンテナを再起動せずに即座に反映されます。
+アプリケーションは Nginx の HTTP Basic Authentication で保護されています。`htpasswd_user.sh` を使用して認証情報を管理します。変更はコンテナを再起動せずに即座に反映されます。
 
 > **初回セットアップ** — 実行権限を一度だけ付与してください:
 > ```bash
-> chmod +x add_user.sh
+> chmod +x htpasswd_user.sh
 > ```
 
 ### ユーザーの追加 / 更新
 
 ```bash
 # 対話形式でパスワードを入力（シェル履歴に残らないため推奨）
-./add_user.sh add admin
+./htpasswd_user.sh add admin
 
 # パスワードを直接指定
-./add_user.sh add alice secret123
+./htpasswd_user.sh add alice secret123
 ```
 
 ### ユーザーの削除
 
 ```bash
-./add_user.sh del alice
+./htpasswd_user.sh del alice
 ```
 
 ### ユーザー一覧の表示
 
 ```bash
-./add_user.sh list
+./htpasswd_user.sh list
 ```
 
 > `add` または `del` 実行後、スクリプトは自動的に `nginx -s reload` を送信し、既存の接続を切断することなく変更を適用します。
