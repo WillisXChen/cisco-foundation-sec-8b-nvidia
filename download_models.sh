@@ -17,7 +17,7 @@ fi
 echo "Checking and downloading Foundation-Sec-8B..."
 FOUNDATION_MODEL="/app/models/foundation-sec-8b-q4_k_m.gguf"
 
-# 如果存在但檔案過小（下載不完整），先刪除重新下載
+# If file exists but is too small (incomplete download), delete and redownload
 if [ -f "$FOUNDATION_MODEL" ]; then
   FILESIZE=$(stat -c%s "$FOUNDATION_MODEL" 2>/dev/null || echo 0)
   if [ "$FILESIZE" -lt 1000000000 ]; then

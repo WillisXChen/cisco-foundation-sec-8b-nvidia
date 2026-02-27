@@ -1,17 +1,17 @@
 # Maintainer: Willis Chen <misweyu2007@gmail.com>
-# 使用 NVIDIA 官方提供的 CUDA 開發版映像檔作為基底
-# 我們需要 devel 版本因為安裝 llama-cpp-python 時需要編譯 CUDA 相關的 C/C++ 程式碼
+# Use NVIDIA's official CUDA devel image as base
+# We need the devel version because llama-cpp-python requires compiling related C/C++ code for CUDA
 FROM nvidia/cuda:12.6.3-devel-ubuntu24.04
 
-# 切換為 root 使用者執行後續指令 (確保權限足夠)
+# Switch to root user to execute subsequent commands (ensures sufficient permissions)
 USER root
 
-# 設定環境變數以防止 apt 安裝過程中出現互動式提示
+# Set environment variables to prevent interactive prompts during apt installation
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 
-# 安裝 Python, pip, 以及必要的編譯工具 (包含 wget 與 curl 供網路下載使用)
-# Ubuntu 24.04 預設即有較新穩定的 Python3，直接安裝 python3 即可
+# Install Python, pip, and essential build tools (including wget and curl for network downloads)
+# Ubuntu 24.04 comes with a relatively new and stable Python3 by default, so installing python3 is sufficient
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
@@ -25,42 +25,42 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 
-# 建立並設定工作目錄
+# Create and set the working directory
 WORKDIR /app
 
-# 將 requirements 檔案複製進容器
+# Copy the requirements file into the container
 COPY requirements.txt .
 
-# 這是針對 Ubuntu 24.04 / Python 3.12 引入的 PEP 668 規範
-# 我們必須在虛擬環境中安裝 pip 套件以避免破壞系統套件
+# This is for PEP 668 compliance introduced in Ubuntu 24.04 / Python 3.12
+# We must install pip packages within a virtual environment to avoid breaking system packages
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# 安裝 wheel 與編譯所需的基本 py 套件
+# Install wheel and basic py packages required for building
 RUN pip install --no-cache-dir --upgrade pip wheel setuptools
 
-# 設定環境變數以啟用 llama-cpp-python 的 CUDA 支援
-# 註: 新版 llama.cpp 已棄用 LLAMA_CUBLAS，改用 GGML_CUDA
-# 必須明確指出 nvcc 的編譯器路徑，否則在部分 24.04 環境下 wheel 會找不到 CUDA
+# Set environment variables to enable CUDA support for llama-cpp-python
+# Note: Newer versions of llama.cpp deprecated LLAMA_CUBLAS in favor of GGML_CUDA
+# Path to nvcc compiler must be explicitly specified, otherwise wheel may fail to find CUDA in some 24.04 environments
 ENV CMAKE_ARGS="-DGGML_CUDA=on -DCUDAToolkit_ROOT=/usr/local/cuda"
 ENV FORCE_CMAKE=1
 ENV CC=/usr/bin/gcc
 ENV CXX=/usr/bin/g++
 
-# 安裝 Python 依賴包
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 複製模型下載腳本並給予執行權限
+# Copy model downloading script and grant execution permissions
 COPY download_models.sh .
 RUN chmod +x download_models.sh
 
-# 在建立 Image 的過程中預先下載模型 (這會花一些時間，但能確保啟動時不用等)
-# 使用 bash 明確執行（腳本 shebang 為 #!/bin/bash）
+# Pre-download models during Image build (takes time, but saves waiting upon startup)
+# Execute explicitly using bash (script shebang is #!/bin/bash)
 RUN bash download_models.sh
 
-# 複製其餘的應用程式碼進容器
+# Copy remaining application code into the container
 COPY . .
 
-# 預設執行一個持續運行的程序，讓你之後可以 bash 進去測試
-# 也可以改成 CMD ["python3", "translate_logs.py"] 或是其他你想直接啟動的服務
+# Run a persistent process by default, allowing you to bash inside for testing
+# Can be changed to CMD ["python3", "translate_logs.py"] or another service you want to start directly
 CMD ["tail", "-f", "/dev/null"]

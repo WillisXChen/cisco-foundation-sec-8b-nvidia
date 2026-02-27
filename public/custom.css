@@ -2,12 +2,12 @@
    Cisco Foundation-Sec 8B — Custom Avatar / UI Styles
    Maintainer: Willis Chen <misweyu2007@gmail.com>
    Sci-Fi / Cyberpunk HUD Theme v3.0
-   顏色全面改由 theme.json CSS 變數控制
+   Colors are fully controlled by theme.json CSS variables
    ==================================================== */
 
-/* ===== 科幻動態背景：格線 + 掃描線 + 霓虹光 ===== */
+/* ===== Sci-Fi Dynamic Background: Grid + Scanlines + Neon Glow ===== */
 
-/* 動態格線背景 */
+/* Dynamic Grid Background */
 @keyframes gridScroll {
   0% {
     background-position: 0 0;
@@ -18,7 +18,7 @@
   }
 }
 
-/* 掃描線動畫 */
+/* Scanline Animation */
 @keyframes scanlines {
   0% {
     transform: translateY(-100%);
@@ -31,7 +31,7 @@
   }
 }
 
-/* 霓虹脈衝光暈 */
+/* Neon Pulse Glow */
 @keyframes neonPulse {
 
   0%,
@@ -48,7 +48,7 @@
   }
 }
 
-/* 邊框流光 */
+/* Border Glow Animation */
 @keyframes borderGlow {
 
   0%,
@@ -61,7 +61,7 @@
   }
 }
 
-/* 文字打字機閃爍效果 */
+/* Text Typewriter Blink Effect */
 @keyframes cursorBlink {
 
   0%,
@@ -74,7 +74,7 @@
   }
 }
 
-/* ===== 主體背景：動態格線 + 深色基底 ===== */
+/* ===== Body Background: Dynamic Grid + Dark Base ===== */
 body,
 #root,
 .cl-root {
@@ -88,7 +88,7 @@ body,
   animation: gridScroll 8s linear infinite !important;
 }
 
-/* ===== 掃描線覆蓋層 ===== */
+/* ===== Scanline Overlay ===== */
 body::before {
   content: '';
   position: fixed;
@@ -105,7 +105,7 @@ body::before {
   animation: scanlines 6s linear infinite;
 }
 
-/* ===== 全域光暈角落裝飾 ===== */
+/* ===== Global Glow Corner Decorations ===== */
 body::after {
   content: '';
   position: fixed;
@@ -117,7 +117,7 @@ body::after {
   z-index: 0;
 }
 
-/* ===== 對話訊息容器：科幻毛玻璃卡片 ===== */
+/* ===== Message Container: Sci-Fi Frosted Glass Card ===== */
 [class*="message"],
 [class*="Message"],
 [class*="step"],
@@ -147,7 +147,7 @@ body::after {
   border-color: hsl(var(--ring) / 0.40) !important;
 }
 
-/* ===== 使用者訊息泡泡：略偏主色科幻色 ===== */
+/* ===== User Message Bubble: Slightly Accent Sci-Fi Color ===== */
 [class*="userMessage"],
 [class*="user-message"],
 [class*="UserMessage"] {
@@ -157,7 +157,7 @@ body::after {
   border-color: hsl(var(--primary) / 0.30) !important;
 }
 
-/* ===== 主聊天區域背景 ===== */
+/* ===== Main Chat Area Background ===== */
 main,
 [class*="chat-container"],
 [class*="chatContainer"],
@@ -166,7 +166,7 @@ main,
   background: transparent !important;
 }
 
-/* ===== 輸入框：霓虹科幻風格 ===== */
+/* ===== Input Box: Neon Sci-Fi Style ===== */
 [class*="input"],
 [class*="Input"],
 textarea,
@@ -191,7 +191,7 @@ textarea:focus {
   outline: none !important;
 }
 
-/* ===== 底部輸入列容器 ===== */
+/* ===== Bottom Input Row Container ===== */
 [class*="inputContainer"],
 [class*="input-container"],
 [class*="composer"],
@@ -204,7 +204,7 @@ textarea:focus {
   border-top: 1px solid hsl(var(--border) / 0.40) !important;
 }
 
-/* ===== 側邊欄：深邃科幻風 ===== */
+/* ===== Sidebar: Deep Sci-Fi Style ===== */
 [class*="sidebar"],
 [class*="Sidebar"],
 nav {
@@ -223,7 +223,7 @@ header {
   box-shadow: 0 2px 24px hsl(var(--background) / 0.60) !important;
 }
 
-/* ===== 程式碼區塊：Hacker Terminal 風格 ===== */
+/* ===== Code Block: Hacker Terminal Style ===== */
 pre,
 code {
   background: hsl(var(--muted) / 0.60) !important;
@@ -234,7 +234,7 @@ code {
   box-shadow: 0 0 10px hsl(var(--ring) / 0.06) !important;
 }
 
-/* ===== 按鈕：科幻霓虹 CTA ===== */
+/* ===== Button: Sci-Fi Neon CTA ===== */
 button[class*="primary"],
 [class*="sendButton"],
 [class*="send-button"] {
@@ -256,7 +256,7 @@ button[class*="primary"]:hover,
   transform: translateY(-1px) !important;
 }
 
-/* ===== 文字顏色：交給 theme.json 控制 ===== */
+/* ===== Text Color: Handled by theme.json ===== */
 p,
 span,
 li {
@@ -273,14 +273,14 @@ h6 {
   text-shadow: 0 0 12px hsl(var(--primary) / 0.35) !important;
 }
 
-/* ===== 引用塊 ===== */
+/* ===== Blockquotes ===== */
 blockquote {
   border-left: 3px solid hsl(var(--ring) / 0.40) !important;
   background: hsl(var(--ring) / 0.04) !important;
   border-radius: 0 var(--radius) var(--radius) 0 !important;
 }
 
-/* ===== 捲軸科幻美化 ===== */
+/* ===== Scrollbar Sci-Fi Beautification ===== */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -304,7 +304,7 @@ blockquote {
       hsl(var(--primary)) 100%);
 }
 
-/* ===== Avatar 尺寸優化 ===== */
+/* ===== Avatar Size Optimization ===== */
 .cl-avatar,
 [class*="avatar"],
 [class*="Avatar"] {

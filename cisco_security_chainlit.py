@@ -6,12 +6,12 @@ from llama_cpp import Llama
 from qdrant_client import QdrantClient
 
 # === Configuration ===
-# 設定預設的模型路徑，可以透過環境變數覆寫
+# Set default model paths, can be overridden via environment variables
 MODEL_SEC_PATH = os.getenv("MODEL_SEC_PATH", "/app/models/foundation-sec-8b-q4_k_m.gguf")
 MODEL_LLAMA3_PATH = os.getenv("MODEL_LLAMA3_PATH", "/app/models/llama-3-taiwan-8b-instruct-q4_k_m.gguf")
 
-# === 全域變數 (Global instances) ===
-# 只在啟動時載入一次模型，避免每次連線都重新載入消耗記憶體與時間
+# === Global instances ===
+# Load models only once at startup to avoid memory and time overhead on every connection
 llm_llama3 = None
 llm_sec = None
 qdrant_client = None
@@ -30,12 +30,12 @@ general_system_message = (
     "You are a helpful AI assistant. Answer the user's questions politely and naturally in Traditional Chinese."
 )
 
-# RTX 2060 6GB VRAM 設定：
-# 兩個 8B Q4_K_M 模型各紀4.5GB，同時全層 GPU 會超出 6GB 上限
-# 將 Llama-3-Taiwan 用於分類 + 翻譯，f設為較少 GPU 層 (鋀跟 CPU 協同操作)
-# Foundation-Sec 用於資安分析，給予更多 GPU 層 (它的輸出質量影響較大)
-N_GPU_LAYERS_LLAMA3 = int(os.getenv("N_GPU_LAYERS_LLAMA3", "20"))   # 部分層上 GPU
-N_GPU_LAYERS_SEC    = int(os.getenv("N_GPU_LAYERS_SEC",    "35"))   # 較多層上 GPU
+# RTX 2060 6GB VRAM Settings:
+# Two 8B Q4_K_M models are ~4.5GB each, putting both entirely on GPU will exceed 6GB limit
+# Use Llama-3-Taiwan for classification + translation, assign fewer GPU layers (collaborates with CPU)
+# Foundation-Sec is used for security analysis, allocate more GPU layers (its output quality is more critical)
+N_GPU_LAYERS_LLAMA3 = int(os.getenv("N_GPU_LAYERS_LLAMA3", "20"))   # Partial layers on GPU
+N_GPU_LAYERS_SEC    = int(os.getenv("N_GPU_LAYERS_SEC",    "35"))   # More layers on GPU
 
 
 def load_model(model_path: str, context_size: int = 4096, n_gpu_layers: int = -1):
@@ -43,53 +43,53 @@ def load_model(model_path: str, context_size: int = 4096, n_gpu_layers: int = -1
     Load a GGUF model via llama-cpp-python.
 
     Args:
-        model_path:    模型檔案路徑
-        context_size:  Context window 大小
-        n_gpu_layers:  放入 GPU VRAM 的層數 (-1 = 全部)
+        model_path:    Model file path
+        context_size:  Context window size
+        n_gpu_layers:  Number of layers loaded into GPU VRAM (-1 = all)
     """
     if not os.path.exists(model_path):
         raise FileNotFoundError(
-            f"[ModelLoader] 找不到模型檔案: {model_path}\n"
-            f"請確認 download_models.sh 已執行，模型已存在於 /app/models/"
+            f"[ModelLoader] Model file not found: {model_path}\n"
+            f"Please ensure download_models.sh is executed and models exist in /app/models/"
         )
 
     file_size_mb = os.path.getsize(model_path) / (1024 * 1024)
     if file_size_mb < 100:
         raise ValueError(
-            f"[ModelLoader] 模型檔案异常小 ({file_size_mb:.1f} MB)，檢查是否下載不完整: {model_path}"
+            f"[ModelLoader] Model file is abnormally small ({file_size_mb:.1f} MB), check for incomplete download: {model_path}"
         )
 
-    print(f"[ModelLoader] 載入模型: {model_path} ({file_size_mb:.0f} MB) | GPU layers={n_gpu_layers}")
+    print(f"[ModelLoader] Loading model: {model_path} ({file_size_mb:.0f} MB) | GPU layers={n_gpu_layers}")
     try:
         llm = Llama(
             model_path=model_path,
             n_gpu_layers=n_gpu_layers,
             seed=1337,
             n_ctx=context_size,
-            verbose=True,         # 開啟詳細輸出，方便從 log 看到 GPU 層分配狀態
+            verbose=True,         # Enable verbose output to observe GPU layer allocation details from logs
             chat_format="llama-3"
         )
     except Exception as e:
-        # 泄露真正的載入錯誤，避免被 __del__ 的 AttributeError 掃居
+        # Surface actual loading error to avoid it being suppressed by __del__ AttributeError
         raise RuntimeError(
-            f"[ModelLoader] 模型載入失敗: {model_path}\n"
-            f"原始錯誤: {type(e).__name__}: {e}\n"
-            f"請檢查: 1) GPU VRAM 是否足夠 2) 模型檔案是否完整 3) CUDA driver 是否正常"
+            f"[ModelLoader] Failed to load model: {model_path}\n"
+            f"Original Error: {type(e).__name__}: {e}\n"
+            f"Please check: 1) Is GPU VRAM sufficient? 2) Is model file intact? 3) Are CUDA drivers functioning correctly?"
         ) from e
 
-    print(f"[ModelLoader] ✅ 模型載入成功: {os.path.basename(model_path)}")
+    print(f"[ModelLoader] ✅ Model loaded successfully: {os.path.basename(model_path)}")
     return llm
 
 @cl.on_chat_start
 async def on_chat_start():
     global llm_llama3, llm_sec, qdrant_client
     
-    # 傳送載入中的訊息給使用者
+    # Send loading message to user
     loading_msg = cl.Message(content="### ⚙️ 系統初始化中... 正在載入 AI 模型，請稍候。")
     await loading_msg.send()
 
     try:
-        # 載入模型（若尚未載入）
+        # Load models (if not already loaded)
         if llm_llama3 is None:
             llm_llama3 = load_model(MODEL_LLAMA3_PATH, n_gpu_layers=N_GPU_LAYERS_LLAMA3)
         if llm_sec is None:
@@ -101,7 +101,7 @@ async def on_chat_start():
             print("Setting up embedding model...")
             qdrant_client.set_model("BAAI/bge-small-en-v1.5")
 
-            # 自動初始化：若 security_playbooks collection 不存在，自動建立並注入 SOP 文件
+            # Auto-initialization: If security_playbooks collection is missing, auto-create and ingest SOP docs
             COLLECTION_NAME = "security_playbooks"
             existing = [c.name for c in qdrant_client.get_collections().collections]
             if COLLECTION_NAME not in existing:
@@ -134,7 +134,7 @@ async def on_chat_start():
         await loading_msg.update()
         return
 
-    # 初始化這個使用者的聊天歷史紀錄
+    # Initialize chat history for this user session
     cl.user_session.set("chat_history", [])
 
 @cl.on_message
@@ -159,16 +159,16 @@ async def main(message: cl.Message):
         }
     ]
 
-    # 僅根據當前問題判斷 Intent，避免歷史對話過長導致分類器（Llama 3）混亂而無法正確輸出 YES/NO
+    # Only determine intent based on current question to prevent Llama 3 classifier confusion over long history context
     classification_messages.append({"role": "user", "content": user_input})
 
     is_security = False
     
-    # 建立 IT 關鍵字安全網，防止小型模型對生硬 Log 分類失敗
+    # Fallback keyword safety net, preventing small models from failing to classify stark logs
     critical_it_keywords = ["http", "get ", "post ", "error", "exception", "php", "sql", "login", ".bak", "log", "404", "500", "id_rsa", "ssh"]
     user_input_lower = user_input.lower()
     
-    # 如果 Llama3 判斷錯誤，但內容明顯是 IT/Log 相關，強制定義為資安問題
+    # If Llama3 misjudged but contents are ostensibly IT/Log related, force assign to security intent
     if any(keyword in user_input_lower for keyword in critical_it_keywords):
         is_security = True
         print("[DEBUG] Intent forced to YES by Keyword Matching")
@@ -187,7 +187,7 @@ async def main(message: cl.Message):
             print(f"[Classification Error]: {e}")
             is_security = False
 
-    # 根據分類結果決定使用的模型
+    # Choose model to use based on classification result
     active_llm = llm_sec if is_security else llm_llama3
     active_name = "Foundation-Sec" if is_security else "Llama3-Taiwan"
     active_system_msg = sec_system_message if is_security else general_system_message
@@ -195,7 +195,7 @@ async def main(message: cl.Message):
     # === Main Generation ===
     chat_messages = [{"role": "system", "content": active_system_msg}]
     
-    # 無論是一般還是資安問題，都帶入歷史對話紀錄，確保多輪上下文記憶
+    # Prepend chat history for context memory regardless of general or security question
     for msg in chat_history:
         chat_messages.append(msg)
 
@@ -217,14 +217,14 @@ async def main(message: cl.Message):
         except Exception as e:
             print(f"[RAG Error] {e}")
 
-        # 針對資安相關問題，適度提醒回覆英文即可，不要用語氣過於強烈的威脅性字眼，避免 8B 模型引發幻覺崩潰
+        # Enforce English-only output for security questions implicitly without overly heavy threatening tones, preventing hallucinations from the 8B model
         enforced_input = f"{context_str}{user_input}\n\n[Action: Please analyze the above input and respond in English only. Base your answer on the Internal System Context if it is relevant.]"
         chat_messages.append({"role": "user", "content": enforced_input})
 
-    # 準備一個明顯的前綴標籤，讓使用者知道是哪個模型在回答
+    # Output visible prefix badge so users know which model generated responses
     model_badge = f"### 🧠 由 `{active_name}` 生成回應\n---\n"
     
-    # 先發送一個空的 Message (UI 出現載入動畫)，之後會逐步串流 (Stream)
+    # Send empty Message first (triggering UI loading animation), then we stream out progressively
     response_msg = cl.Message(content=model_badge, author=active_name)
     await response_msg.send()
 
@@ -234,17 +234,17 @@ async def main(message: cl.Message):
         stream = active_llm.create_chat_completion(
             messages=chat_messages,
             stream=True,         
-            temperature=0.4 if is_security else 0.2,  # 提高自然變化率以取代強壓式的懲罰
+            temperature=0.4 if is_security else 0.2,  # Boost natural variation rate as an alternative to harsh penalties
             top_p=0.9,
-            repeat_penalty=1.05 if is_security else 1.0, # 降到最底線，防止 logits 崩潰成亂碼
-            frequency_penalty=0.0, # 全面關閉，這是導致印出奇怪符號的主因
-            presence_penalty=0.0,  # 全面關閉
+            repeat_penalty=1.05 if is_security else 1.0, # Drop to bottom baseline to prevent logit collapse into gibberish
+            frequency_penalty=0.0, # Completely disabled, as this was the main reason for strange symbol outputs
+            presence_penalty=0.0,  # Completely disabled
             max_tokens=600 if is_security else 2048,
             stop=["<|eot_id|>", "<|end_of_text|>", "</s>", "[INST]", "User:", "[Foundation-Sec]:", "\n\n", "Your response:"]
         )
 
         usage_main = None
-        gen_start_time = time.time()  # ⏱️ 開始計時主要生成
+        gen_start_time = time.time()  # ⏱️ Start main generation timing
         for chunk in stream:
             if "usage" in chunk and chunk["usage"]:
                 usage_main = chunk["usage"]
@@ -253,10 +253,10 @@ async def main(message: cl.Message):
                 if "content" in delta:
                     text_chunk = delta["content"]
                     assistant_response += text_chunk
-                    await response_msg.stream_token(text_chunk) # 即時將字串送往前端
-        gen_elapsed = time.time() - gen_start_time  # ⏱️ 結束計時
+                    await response_msg.stream_token(text_chunk) # Yield real-time string over to frontend
+        gen_elapsed = time.time() - gen_start_time  # ⏱️ End timing
                     
-        # 計算 Tokens 資訊
+        # Calculate Tokens metadata
         if not usage_main:
             p_tokens = len(active_llm.tokenize(str(chat_messages).encode("utf-8")))
             c_tokens = len(active_llm.tokenize(assistant_response.encode("utf-8")))
@@ -270,7 +270,7 @@ async def main(message: cl.Message):
         await response_msg.stream_token("\n\n---\n")
         await response_msg.stream_token(token_info_main)
         
-        await response_msg.update() # 結束 Token 串流
+        await response_msg.update() # Finish Token streaming
 
         # === Translation for Security Output ===
         if is_security:
@@ -293,12 +293,12 @@ async def main(message: cl.Message):
                     stop=["<|eot_id|>", "<|end_of_text|>"]
                 )
                 
-                # 重設翻譯區塊的內容準備接收新的串流，並加上模型標籤
+                # Reset translation chunk to prepare for new streams, alongside the model badge
                 trans_msg.content = trans_badge
                 await trans_msg.update()
 
                 trans_usage = None
-                trans_start_time = time.time()  # ⏱️ 開始計時翻譯生成
+                trans_start_time = time.time()  # ⏱️ Start translation generation timing
                 for chunk in trans_stream:
                     if "usage" in chunk and chunk["usage"]:
                         trans_usage = chunk["usage"]
@@ -308,9 +308,9 @@ async def main(message: cl.Message):
                             text_chunk = delta["content"]
                             chinese_response += text_chunk
                             await trans_msg.stream_token(text_chunk)
-                trans_elapsed = time.time() - trans_start_time  # ⏱️ 結束計時
+                trans_elapsed = time.time() - trans_start_time  # ⏱️ End timing
                 
-                # 計算 Tokens 資訊
+                # Calculate Tokens metadata
                 if not trans_usage:
                     tp_tokens = len(llm_llama3.tokenize(str(trans_messages).encode("utf-8")))
                     tc_tokens = len(llm_llama3.tokenize(chinese_response.encode("utf-8")))
@@ -326,15 +326,15 @@ async def main(message: cl.Message):
                 
                 await trans_msg.update()
                 
-                # 注意：這裡「不」將中文翻譯結果整併進 assistant_response
-                # 這樣才能確保資安模型（只能講英文）在讀取歷史紀錄時，不會看到自己產生中文，避免發生語系幻覺污染
+                # Note: We do "not" integrate the translated Chinese response into assistant_response here!
+                # This guarantees that the security model (English-only domain) does not see generated Chinese inside history, avoiding localization hallucinations.
                 
             except Exception as e:
                 print(f"[Translation Error]: {e}")
                 trans_msg.content = "**[中文翻譯失敗]**\n" + str(e)
                 await trans_msg.update()
 
-        # Update chat history (只存乾淨的英文或一般對話，不含 Token 資訊與翻譯)
+        # Update chat history (only storing clean English or general chats, no token info or nested translations)
         chat_history.append({"role": "user", "content": user_input})
         chat_history.append({"role": "assistant", "content": assistant_response})
         cl.user_session.set("chat_history", chat_history)
