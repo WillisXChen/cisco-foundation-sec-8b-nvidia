@@ -1,5 +1,6 @@
 #!/bin/bash
 # Maintainer: Willis Chen <misweyu2007@gmail.com>
+set -e
 # Step 1: Save a list of your current images (for reference)
 sudo docker images
 # Step 2: Remove snap Docker

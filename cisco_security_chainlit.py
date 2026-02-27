@@ -2,6 +2,8 @@
 import chainlit as cl
 import os
 import time
+import asyncio
+import json
 from llama_cpp import Llama
 from qdrant_client import QdrantClient
 
@@ -91,9 +93,9 @@ async def on_chat_start():
     try:
         # Load models (if not already loaded)
         if llm_llama3 is None:
-            llm_llama3 = load_model(MODEL_LLAMA3_PATH, n_gpu_layers=N_GPU_LAYERS_LLAMA3)
+            llm_llama3 = await asyncio.to_thread(load_model, MODEL_LLAMA3_PATH, 4096, N_GPU_LAYERS_LLAMA3)
         if llm_sec is None:
-            llm_sec = load_model(MODEL_SEC_PATH, n_gpu_layers=N_GPU_LAYERS_SEC)
+            llm_sec = await asyncio.to_thread(load_model, MODEL_SEC_PATH, 4096, N_GPU_LAYERS_SEC)
         if qdrant_client is None:
             print("Connecting to Qdrant instance...")
             qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
@@ -106,22 +108,21 @@ async def on_chat_start():
             existing = [c.name for c in qdrant_client.get_collections().collections]
             if COLLECTION_NAME not in existing:
                 print(f"[RAG] Collection '{COLLECTION_NAME}' not found. Running auto-ingest...")
-                documents = [
-                    {"id": 1, "title": "Handling config.php.bak scans",
-                     "content": "If a user or IP is repeatedly scanning for config.php.bak, backup.zip, or similar backup files, it indicates a directory traversal or backup file exposure attack. Action: Immediately block the IP at the WAF level and investigate if any backup files are actually exposed on the server."},
-                    {"id": 2, "title": "Recurring Nginx 404s",
-                     "content": "A high volume of Nginx 404 errors for hidden files (e.g., .env, .git/config) signifies an automated vulnerability scanner. Action: Temporarily ban the IP using fail2ban and enable rate limiting for 404 responses."},
-                    {"id": 3, "title": "SSH Brute Force",
-                     "content": "Multiple failed SSH login attempts for users like root or admin. Action: Ensure password authentication is disabled, rely on SSH keys only, and verify fail2ban is monitoring port 22."},
-                    {"id": 4, "title": "SQL Injection Attempts",
-                     "content": "Logs containing keywords like UNION SELECT, OR 1=1, or unexpected quotation marks in URL parameters. Action: Validate input sanitization on the application end and update WAF rules to block common SQLi payloads."},
-                ]
-                qdrant_client.add(
-                    collection_name=COLLECTION_NAME,
-                    documents=[d["content"] for d in documents],
-                    metadata=[{"title": d["title"]} for d in documents],
-                    ids=[d["id"] for d in documents],
-                )
+                playbook_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "playbooks.json")
+                try:
+                    with open(playbook_file, "r", encoding="utf-8") as f:
+                        documents = json.load(f)
+                except FileNotFoundError:
+                    documents = []
+                    print(f"[RAG] Warning: {playbook_file} not found. Skipping auto-ingest.")
+
+                if documents:
+                    qdrant_client.add(
+                        collection_name=COLLECTION_NAME,
+                        documents=[d["content"] for d in documents],
+                        metadata=[{"title": d["title"]} for d in documents],
+                        ids=[d["id"] for d in documents],
+                    )
                 print(f"[RAG] ✅ Auto-ingest complete: {len(documents)} SOPs added to '{COLLECTION_NAME}'.")
             else:
                 print(f"[RAG] ✅ Collection '{COLLECTION_NAME}' already exists, skipping ingest.")
@@ -130,7 +131,7 @@ async def on_chat_start():
         await loading_msg.update()
         
     except Exception as e:
-        loading_msg.content = f"### ❌ 模型載入失敗\n錯誤訊息: `{e}`\n請確認模型路徑是否正確 (預設路徑 `./models/...`)。"
+        loading_msg.content = f"### ❌ Model load failed\nError message: `{e}`\nPlease verify if the model path is correct (default path `./models/...`)."
         await loading_msg.update()
         return
 
@@ -142,7 +143,7 @@ async def main(message: cl.Message):
     global llm_llama3, llm_sec, qdrant_client
     
     if llm_llama3 is None or llm_sec is None or qdrant_client is None:
-        await cl.Message(content="⚠️ 模型尚未載入完成，請重整頁面或確認終端機錯誤訊息。").send()
+        await cl.Message(content="⚠️ Models are not fully loaded yet. Please refresh the page or check the terminal for error messages.").send()
         return
 
     user_input = message.content.strip()
@@ -331,7 +332,7 @@ async def main(message: cl.Message):
                 
             except Exception as e:
                 print(f"[Translation Error]: {e}")
-                trans_msg.content = "**[中文翻譯失敗]**\n" + str(e)
+                trans_msg.content = "**[Translation Failed]**\n" + str(e)
                 await trans_msg.update()
 
         # Update chat history (only storing clean English or general chats, no token info or nested translations)
@@ -340,5 +341,5 @@ async def main(message: cl.Message):
         cl.user_session.set("chat_history", chat_history)
 
     except Exception as e:
-        error_msg = f"❌ 產生回應時發生錯誤: {e}"
+        error_msg = f"❌ Error occurred while generating response: {e}"
         await cl.Message(content=error_msg, author="System").send()

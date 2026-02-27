@@ -4,7 +4,8 @@ import sys
 from llama_cpp import Llama
 
 def run_analysis():
-    translator_model_path = "./models/llama-3-taiwan-8b-instruct-q4_k_m.gguf"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    translator_model_path = os.path.join(base_dir, "models", "llama-3-taiwan-8b-instruct-q4_k_m.gguf")
 
     english_analysis = """Based on the provided web server logs, there are two distinct attacks attempting to compromise the system:
 
